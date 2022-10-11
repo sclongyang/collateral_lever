@@ -29,6 +29,7 @@ contract CollateralLever is IUniswapV2Callee {
     address[] private s_cTokenAddresses;
 
     address[] private s_flashSwapPath;
+    mapping(address => mapping(address => uint256)) public s_collateralCToken2User;
 
     constructor(
         address uniswapV2Router,
@@ -106,13 +107,14 @@ contract CollateralLever is IUniswapV2Callee {
         bytes memory data = abi.encodePacked(
             collateralToken,
             borrowingToken,
-            originalCollateralAmount
+            originalCollateralAmount,
+            msg.sender
         );
         (address token0, address token1) = UniswapV2Library.sortTokens(tokenBase, tokenQuote);
         uint256 amount0;
         uint256 amount1;
         if (token0 == collateralToken) {
-            amount0 = flashSwapAmount;            
+            amount0 = flashSwapAmount;
         } else {
             amount1 = flashSwapAmount;
         }
@@ -129,8 +131,12 @@ contract CollateralLever is IUniswapV2Callee {
         uint256 flashSwapAmount,
         bytes calldata data
     ) external {
-        (address collateralToken, address borrowingToken, uint256 originalCollateralAmount) = abi
-            .decode(data, (address, address, uint256));
+        (
+            address collateralToken,
+            address borrowingToken,
+            uint256 originalCollateralAmount,
+            address user
+        ) = abi.decode(data, (address, address, uint256, address));
         //获得对应的cTokenAddress
         address cTokenCollateral;
         address cTokenBorrowing;
@@ -156,11 +162,15 @@ contract CollateralLever is IUniswapV2Callee {
         }
 
         // compound borrow
-        uint256 repayAmount = IUniswapV2Router(i_uniswapV2RouterAddress).getAmountsIn(flashSwapAmount, s_flashSwapPath)[0];
+        uint256 repayAmount = IUniswapV2Router(i_uniswapV2RouterAddress).getAmountsIn(
+            flashSwapAmount,
+            s_flashSwapPath
+        )[0];
+        uint256 totalCollateralAmount = flashSwapAmount + originalCollateralAmount;
         uint256 borrowedAmount = _borrow(
             cTokenCollateral,
             cTokenBorrowing,
-            flashSwapAmount + originalCollateralAmount,
+            totalCollateralAmount,
             repayAmount
         );
         if (borrowedAmount < repayAmount) {
@@ -171,7 +181,21 @@ contract CollateralLever is IUniswapV2Callee {
         address pair = UniswapV2Library.pairFor(i_uniswapV2FactoryAddress, tokenBase, tokenQuote);
         IERC20(s_flashSwapPath[0]).transfer(pair, repayAmount);
 
-        //若borrowedAmount-repayAmount还有剩余怎么办? 应该是等用户平仓时还给他
+        s_collateralCToken2User[cTokenCollateral][user] += totalCollateralAmount;
+        s_collateralCToken2User[cTokenBorrowing][user] += borrowedAmount - repayAmount;
+    }
+
+    function closePosition(
+        address tokenBase,
+        address tokenQuote,
+        uint256 amount,
+        bool isShort
+    ) external {
+        address collateralToken = isShort ? tokenQuote : tokenBase;
+        address borrowingToken = isShort ? tokenBase : tokenQuote;
+        uint256 collateralAmount = s_collateralCToken2User[collateralToken][msg.sender];
+        amount = min(amount, collateralAmount);
+        
     }
 
     // 参考 https://github.com/compound-developers/compound-borrow-examples/blob/master/contracts/MyContracts.sol
