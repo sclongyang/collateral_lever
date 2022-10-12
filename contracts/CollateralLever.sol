@@ -14,7 +14,7 @@ import "./libraries/UniswapV2Library.sol";
 import "./interfaces/IUniswapV2Router.sol";
 import "./interfaces/ICErc20.sol";
 import "./interfaces/ICEth.sol";
-// import "./interfaces/IComptroller.sol";
+import "./interfaces/IComptroller.sol";
 
 error CollateralLever__notOwnerOfPosition();
 error CollateralLever__notFindPosition(address user, uint256 positionId);
@@ -55,7 +55,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     address private immutable i_uniswapV2RouterAddress;
     address private immutable i_uniswapV2FactoryAddress;
 
-    // address private immutable i_comptrollerAddress;
+    address private immutable i_comptrollerAddress;
     address[] private s_flashSwapPath;
     mapping(address => address) public s_token2CToken; //underlying token address to ctoken address
     mapping(address => PositionInfo[]) public s_userAddress2PositionInfos;
@@ -72,11 +72,12 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     constructor(
         address uniswapV2Router,
         address uniswapV2Factory,
-        address[] memory cTokenAddresses // address comptroller
+        address comptroller,
+        address[] memory cTokenAddresses
     ) {
         i_uniswapV2RouterAddress = uniswapV2Router;
         i_uniswapV2FactoryAddress = uniswapV2Factory;
-        // i_comptrollerAddress = comptroller;
+        i_comptrollerAddress = comptroller;
 
         for (uint256 i = 0; i < cTokenAddresses.length; ++i) {
             s_token2CToken[ICErc20(cTokenAddresses[i]).underlying()] = cTokenAddresses[i];
@@ -510,7 +511,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 collateralAmountOfCallateralToken,
         uint256 borrowAmountOfBorrowingToken
     ) internal {
-        // IComptroller comptroller = IComptroller(i_comptrollerAddress);
+        IComptroller comptroller = IComptroller(i_comptrollerAddress);
         ICErc20 collateralCToken = ICErc20(collateralCTokenAddress);
         ICErc20 borrowingCToken = ICErc20(borrowingCTokenAddress);
 
@@ -536,13 +537,12 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             _ERC20BalanceOf(collateralCTokenAddress, address(this))
         );
 
-        // // Enter the market so you can borrow another type of asset
-        // address[] memory cTokens = new address[](1);
-        // cTokens[0] = collateralCTokenAddress;
-        // uint256[] memory errors = comptroller.enterMarkets(cTokens);
-        // if (errors[0] != 0) {
-        //     revert("Comptroller.enterMarkets failed.");
-        // }
+        address[] memory cTokens = new address[](1);
+        cTokens[0] = collateralCTokenAddress;
+        uint256[] memory errors = comptroller.enterMarkets(cTokens);
+        if (errors[0] != 0) {
+            revert("Comptroller.enterMarkets failed.");
+        }
 
         console.log(
             "before compound borrow, borrowingCToken amount of this:%s",
@@ -656,5 +656,9 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
     function getUniswapV2FactoryAddress() external view returns (address) {
         return i_uniswapV2FactoryAddress;
+    }
+
+    function getComptrollerAddress() external view returns (address) {
+        return i_comptrollerAddress;
     }
 }
