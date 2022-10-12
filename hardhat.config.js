@@ -16,12 +16,13 @@ const REPORT_GAS = process.env.REPORT_GAS || false
 module.exports = {
     defaultNetwork: "hardhat",
     networks: {
-        // hardhat: {            
-        //     forking: {
-        //       url: MAINNET_RPC_URL
-        //     }
-        //     chainId: 31337,
-        // },
+        hardhat: {            
+            forking: {
+              url: MAINNET_RPC_URL,
+              blockNumber: 15733251,
+            },
+            // chainId: 31337,
+        },
         localhost: {
             chainId: 31337,
         },
@@ -29,7 +30,8 @@ module.exports = {
             url: GOERLI_RPC_URL,
             accounts: [PRIVATE_KEY,PRIVATE_KEY_USER],
             saveDeployments: true,
-            chainId: 5,
+            chainId: 5,    
+            allowUnlimitedContractSize: true,
         },
         mainnet: {
             url: MAINNET_RPC_URL,
