@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.5.0;
+pragma solidity ^0.8.0;
 
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 library UniswapV2Library {
-    using SafeMath for uint;
+    using SafeMath for uint256;
 
     function pairFor(
         address factory,
@@ -16,14 +16,16 @@ library UniswapV2Library {
         (address token0, address token1) = sortTokens(tokenA, tokenB);
         //根据排序的token地址计算create2的pair地址
         pair = address(
-            uint256(
-                keccak256(
-                    abi.encodePacked(
-                        hex"ff",
-                        factory,
-                        keccak256(abi.encodePacked(token0, token1)),
-                        // pair合约bytecode的keccak256
-                        hex"96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f"
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            hex"ff",
+                            factory,
+                            keccak256(abi.encodePacked(token0, token1)),
+                            // pair合约bytecode的keccak256
+                            hex"96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f"
+                        )
                     )
                 )
             )
