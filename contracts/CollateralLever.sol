@@ -112,7 +112,7 @@ contract CollateralLever is IUniswapV2Callee {
                 investmentAmount,
                 path,
                 address(this),
-                _getDeadline()
+                block.timestamp + 600 
             );
         }
 
@@ -430,10 +430,6 @@ contract CollateralLever is IUniswapV2Callee {
         uint256[] memory amounts = IUniswapV2Router(i_uniswapV2RouterAddress)
             .swapExactTokensForTokens(amountIn, 0, path, to, deadline);
         return amounts[1];
-    }
-
-    function _getDeadline() internal view returns (uint256) {
-        return block.timestamp + 600; //10 minutes
     }
 
     function _safeApprove(
