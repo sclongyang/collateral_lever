@@ -99,7 +99,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         bool investmentIsQuote,
         uint256 lever,
         bool isShort
-    ) external nonReentrant {
+    ) external {
         console.log("start open position");
         if (tokenBase == tokenQuote) {
             revert CollateralLever__tokenBaseEqTokenQuote();
@@ -161,7 +161,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         //flashswap
         uint256 flashSwapAmountOfCollateralToken = originalCollateralAmount * (lever - 1);
         address pair = UniswapV2Library.pairFor(i_uniswapV2FactoryAddress, tokenBase, tokenQuote);
-        bytes memory data = abi.encodePacked(
+        bytes memory data = abi.encode(
             collateralToken,
             borrowingToken,
             originalCollateralAmount,
@@ -192,7 +192,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
     function closePosition(
         uint256 positionId // uint256 repayAmountOfBorrowingToken //平仓数量    第一版暂不使用该参数, 只实现全量平仓
-    ) external OwnerOfPosition(msg.sender, positionId) nonReentrant {
+    ) external OwnerOfPosition(msg.sender, positionId) {
         console.log("start close postion");
 
         (, PositionInfo memory positionInfo) = _findPosition(msg.sender, positionId);
@@ -217,7 +217,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             borrowingTokenAddress
         );
 
-        bytes memory data = abi.encodePacked(
+        bytes memory data = abi.encode(
             positionInfo.cTokenCollateralAddress,
             positionInfo.cTokenBorrowingAddress,
             positionInfo.collateralAmountOfCollateralToken,
@@ -245,14 +245,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         console.log("start flash swap of close postion");
 
         IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
-    }
+    }    
 
-    function uniswapV2Call(
+     function uniswapV2Call(
         address sender,
         uint256 amount0,
         uint256 flashSwapAmount,
         bytes calldata data
-    ) external override nonReentrant {
+    ) external override  {
         console.log("uniswap pair call uniswapV2Call");
         (
             address collateralTokenOrCToken, //开仓对应于token, 平仓对应于cToken
@@ -313,7 +313,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address user,
         bool isCloseAllAmount,
         uint256 positionId
-    ) internal {
+    ) internal nonReentrant {
         console.log("start _callbackForClosePosition");
 
         ICErc20 borrowingCToken = ICErc20(borrowingCTokenAddress);
@@ -403,7 +403,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         } else {
             revert CollateralLever__notFindPosition(user, positionId);
         }
-    }
+    }    
 
     function _callbackForOpenPosition(
         uint256 flashSwapAmountOfCallateralToken,
