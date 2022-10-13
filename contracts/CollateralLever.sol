@@ -22,8 +22,7 @@ error CollateralLever__callerIsNotUniswapPair();
 error CollateralLever__tokenNotSupport(address token);
 error CollateralLever__tokenBaseEqTokenQuote();
 error CollateralLever__investmentAmountIsZero();
-error CollateralLever__leverIsTooLow();
-error CollateralLever__leverIsTooHigh();
+error CollateralLever__leverIsWrong();
 error CollateralLever__approveFailed();
 error CollateralLever__transferFailed();
 error CollateralLever__transferFromFailed();
@@ -108,12 +107,9 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (investmentAmount == 0) {
             revert CollateralLever__investmentAmountIsZero();
         }
-        if (lever < 2) {
-            revert CollateralLever__leverIsTooLow();
-        }
-        if (lever > 3) {
-            // compound最多能贷出75%, 对应最大杠杆为4
-            revert CollateralLever__leverIsTooHigh();
+        if (lever > 3 || lever < 2) {
+            // compound eth最多能贷出75%, 对应极限杠杆为4
+            revert CollateralLever__leverIsWrong();
         }
         _checkTokenSupported(tokenBase);
         _checkTokenSupported(tokenQuote);

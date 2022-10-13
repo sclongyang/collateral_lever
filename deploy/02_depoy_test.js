@@ -1,7 +1,7 @@
 const { network, ethers } = require("hardhat")
 const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
-const abi = require("../constants/abi.json")
+const abi = require("../constants/ctoken_abi.json")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
@@ -25,17 +25,21 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     if(!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY){
         await verify(contract.address, arguments)        
     }   
+    console.log(`blocknum:${await ethers.provider.getBlockNumber()}`) 
     console.log("------------------------------")    
 
-    // const signers = await ethers.getSigners()
-    //         deployer = signers[0]
-    mainnetCTokenDAI = process.env.MAINNET_COMPOUND_CBAT_ADDRESS
-    myTestContract = await ethers.getContract("MyTest", deployer)
-    console.log(`getUnderlying: ${await myTestContract.getUnderlying(mainnetCTokenDAI)}`)
-    console.log(`blocknum:${await ethers.provider.getBlockNumber()}`) 
+    // mainnetCTokenDAI = process.env.MAINNET_COMPOUND_CBAT_ADDRESS
+    // myTestContract = await ethers.getContract("MyTest", deployer)
+    // console.log(`getUnderlying: ${await myTestContract.getUnderlying(mainnetCTokenDAI)}`)
     
-    ctoken = await ethers.getContractAt(abi, mainnetCTokenDAI,deployer)
-    console.log(`ctoken->token: ${await ctoken.underlying()}`)
+    // ctoken = await ethers.getContractAt(abi, mainnetCTokenDAI,deployer)
+    // console.log(`ctoken->token: ${await ctoken.underlying()}`)
+
+    // collateralContract = await ethers.getContract("CollateralLever", deployer)
+    // await collateralContract.openPosition("0x6B175474E89094C44Da98b954EedeAC495271d0F","0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",1,false,3,false)
+    // console.log(`Position:${await collateralContract.s_userAddress2PositionInfos(deployer,0)}`) 
+
+
 }
 
 module.exports.tags = ["all", "tt"]

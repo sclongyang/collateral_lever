@@ -35,6 +35,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         await verify(collateralLever.address, arguments)        
     }
     console.log("------------------------------")    
+
+    
 }
 
 module.exports.tags = ["all", "collaterallever"]
