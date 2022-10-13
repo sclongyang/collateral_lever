@@ -26,10 +26,10 @@ error CollateralLever__leverIsWrong();
 error CollateralLever__approveFailed();
 error CollateralLever__transferFailed();
 error CollateralLever__transferFromFailed();
-error CollateralLever__CErc20MintFailed();
-error CollateralLever__cErc20RedeemUnderlyingFailed();
-error CollateralLever__cErc20BorrowFailed();
-error CollateralLever__cErc20RepayBorrowFailed();
+error CollateralLever__CErc20MintFailed(uint256 error);
+error CollateralLever__cErc20RedeemUnderlyingFailed(uint256 error);
+error CollateralLever__cErc20BorrowFailed(uint256 error);
+error CollateralLever__cErc20RepayBorrowFailed(uint256 error);
 
 // error CollateralLever__borrowedAmountLessThanRepayAmount();
 
@@ -245,14 +245,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         console.log("start flash swap of close postion");
 
         IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
-    }    
+    }
 
-     function uniswapV2Call(
+    function uniswapV2Call(
         address sender,
         uint256 amount0,
         uint256 flashSwapAmount,
         bytes calldata data
-    ) external override  {
+    ) external override {
         console.log("uniswap pair call uniswapV2Call");
         (
             address collateralTokenOrCToken, //开仓对应于token, 平仓对应于cToken
@@ -334,7 +334,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             isCloseAllAmount ? UINT256_MAX : flashSwapAmountOfBorrowingToken
         );
         if (error != 0) {
-            revert CollateralLever__cErc20RepayBorrowFailed();
+            revert CollateralLever__cErc20RepayBorrowFailed(error);
         }
 
         //闪电贷还款金额
@@ -351,7 +351,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
             error = collateralCToken.redeemUnderlying(totalCollateralAmountOfCollateralToken);
             if (error != 0) {
-                revert CollateralLever__cErc20RedeemUnderlyingFailed();
+                revert CollateralLever__cErc20RedeemUnderlyingFailed(error);
             }
             console.log(
                 "after redeemUnderlying(%s), this balanceof collateralToken:%s",
@@ -403,7 +403,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         } else {
             revert CollateralLever__notFindPosition(user, positionId);
         }
-    }    
+    }
 
     function _callbackForOpenPosition(
         uint256 flashSwapAmountOfCallateralToken,
@@ -522,15 +522,46 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "before compound mint, collateralCToken amount of this:%s",
             _ERC20BalanceOf(collateralCTokenAddress, address(this))
         );
+        console.log(
+            "before compound mint, collateralToken amount of this:%s",
+            _ERC20BalanceOf(collateralCToken.underlying(), address(this))
+        );
+
+        (uint256 error2, uint256 liquidity, uint256 shortfall) = comptroller.getAccountLiquidity(
+            address(this)
+        );
+
+        console.log(
+            "before compound mint, getAccountLiquidity of this:%s, %s, %s",
+            error2,
+            liquidity,
+            shortfall
+        );
+        uint256 error;
 
         // Supply underlying as collateral, get cToken in return
-        uint256 error = collateralCToken.mint(collateralAmountOfCallateralToken);
+        error = collateralCToken.mint(collateralAmountOfCallateralToken);
         if (error != 0) {
-            revert CollateralLever__CErc20MintFailed();
+            revert CollateralLever__CErc20MintFailed(error);
         }
         console.log(
             "after compound mint, collateralCToken amount of this:%s",
             _ERC20BalanceOf(collateralCTokenAddress, address(this))
+        );
+        console.log(
+            "after compound mint, collateralToken amount of this:%s",
+            _ERC20BalanceOf(collateralCToken.underlying(), address(this))
+        );
+
+        ( error2,  liquidity,  shortfall) = comptroller.getAccountLiquidity(
+            address(this)
+        );
+
+        console.log(
+            "after compound mint, getAccountLiquidity of this:%s, %s, %s",
+            error2,
+            liquidity,
+            shortfall
         );
 
         address[] memory cTokens = new address[](1);
@@ -547,7 +578,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
         error = borrowingCToken.borrow(borrowAmountOfBorrowingToken);
         if (error != 0) {
-            revert CollateralLever__cErc20BorrowFailed();
+            revert CollateralLever__cErc20BorrowFailed(error);
         }
         console.log(
             "after compound borrow, borrowingCToken amount of this:%s ",
