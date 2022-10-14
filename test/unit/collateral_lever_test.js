@@ -37,7 +37,11 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             beforeEach(async () => {
                 tokenBase = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
                 tokenQuote = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CBAT_ADDRESS)
-                investmentAmount = 11111
+                const underlyingDecimalsOfDAI = 18
+                const underlyingAsCollateral = 5 //5 DAI                
+                investmentAmount = (underlyingAsCollateral * Math.pow(10, underlyingDecimalsOfDAI)).toString();
+                console.log(`investmentAmount: ${investmentAmount}`)
+
                 investmentIsQuote = false
                 lever = 2
                 isShort = false
@@ -50,7 +54,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
                 const DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
                 const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
                 // await token.connect(impersonatedSigner).transfer(user.address, "1111111")
-                await tokenConnectedByImpersonatedSigner.transfer(user.address, "11111111")
+                await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount)
 
                 // console.log(`balance: deployer: ${await deployer.getBalance()}, user:${await user.getBalance()}`)     
                 // console.log(`tokenBase balance: deployer: ${await getERC20Balance(tokenBase,deployer.address) }, user:${await getERC20Balance(tokenBase,user.address)}`)     

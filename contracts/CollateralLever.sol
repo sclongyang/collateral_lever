@@ -553,9 +553,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             _ERC20BalanceOf(collateralCToken.underlying(), address(this))
         );
 
-        ( error2,  liquidity,  shortfall) = comptroller.getAccountLiquidity(
-            address(this)
-        );
+        (error2, liquidity, shortfall) = comptroller.getAccountLiquidity(address(this));
 
         console.log(
             "after compound mint, getAccountLiquidity of this:%s, %s, %s",
@@ -575,6 +573,10 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "before compound borrow, borrowingCToken amount of this:%s",
             _ERC20BalanceOf(borrowingCTokenAddress, address(this))
         );
+        console.log(
+            "before compound borrow, borrowingToken amount of this:%s",
+            _ERC20BalanceOf(borrowingCToken.underlying(), address(this))
+        );
 
         error = borrowingCToken.borrow(borrowAmountOfBorrowingToken);
         if (error != 0) {
@@ -584,6 +586,10 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "after compound borrow, borrowingCToken amount of this:%s ",
             _ERC20BalanceOf(borrowingCTokenAddress, address(this))
         );
+        console.log(
+            "after compound borrow, borrowingToken amount of this:%s",
+            _ERC20BalanceOf(borrowingCToken.underlying(), address(this))
+        );        
         console.log(
             "is eq to borrowingCToken.borrowBalanceCurrent(address(this))?: %s ",
             borrowingCToken.borrowBalanceCurrent(address(this))
