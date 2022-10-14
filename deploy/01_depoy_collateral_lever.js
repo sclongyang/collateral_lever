@@ -25,8 +25,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             from: deployer,
             args: arguments,
             log: true,
-            waitConfirmations: waitBlockConfirmations,
-            gasLimit:30000000,
+            waitConfirmations: waitBlockConfirmations,            
+            gasLimit:7229450,
         }
     )
     console.log(`fermi deploy CollateralLever address: ${collateralLever.address}`)
