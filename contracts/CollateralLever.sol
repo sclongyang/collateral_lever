@@ -449,10 +449,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             totalCollateralAmount,
             borrowAmountOfBorrowingToken
         );
-        console.log(
-            "after borrow compound, this balance:%s",
-            _ERC20BalanceOf(borrowingToken, address(this))
-        );
 
         //还闪电贷
         address pair = UniswapV2Library.pairFor(
@@ -489,14 +485,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             borrowAmountOfBorrowingToken,
             isShort
         );
-        // console.log(
-        //     "save position, user:%s, positionId:%s,totalCollateralAmount:%s, borrowAmountOfBorrowingToken:%s, isShort:%s",
-        //     user,
-        //     positionId,
-        //     totalCollateralAmount,
-        //     borrowAmountOfBorrowingToken,
-        //     isShort
-        // );
         emit OpenPositionSucc(user, newPosition);
     }
 
@@ -594,8 +582,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "is eq to borrowingCToken.borrowBalanceCurrent(address(this))?: %s ",
             borrowingCToken.borrowBalanceCurrent(address(this))
         );
-
-        // uint256 borrows = borrowingCToken.borrowBalanceCurrent(address(this));
     }
 
     function _swapToCollateral(
