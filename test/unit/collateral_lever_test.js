@@ -7,7 +7,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
 !developmentChains.includes(network.name)
     ? describe.skip : describe("Collateral Lever unit test", () => {
         let collateralLeverOnDeployer, collateralLeverOnUser, deployer, user, DAIAddress
-        let tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort        
+        let tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort
         const cTokenAddressOfTokenBase = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
         const cTokenAddressOfTokenQuote = process.env.MAINNET_COMPOUND_CBAT_ADDRESS
 
@@ -30,7 +30,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             isShort = false
 
             //transfer DAI to user
-            DAIAddress  = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
+            DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
             const addressWithDAI = "0x604981db0C06Ea1b37495265EDa4619c8Eb95A3D"
             await network.provider.send("hardhat_impersonateAccount", [addressWithDAI])
             const impersonatedSigner = await ethers.getSigner(addressWithDAI)
@@ -79,75 +79,65 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             })
 
             it("emit OpenPositionSucc and check s_userAddress2PositionInfos", async () => {
-                const oldUserTokenBaseAmount = Number(await getERC20Balance(tokenBase,user.address))
-                const oldUserTokenQuoteAmount = Number(await getERC20Balance(tokenQuote,user.address))
+                const oldUserTokenBaseAmount = Number(await getERC20Balance(tokenBase, user.address))
+                const oldUserTokenQuoteAmount = Number(await getERC20Balance(tokenQuote, user.address))
 
                 //approve to collateralLever                
-                await approveERC20(DAIAddress, user,collateralLeverOnUser.address, investmentAmount )
+                await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
                 await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.emit(collateralLeverOnUser, "OpenPositionSucc")
-                const postionInfo = await collateralLeverOnUser.s_userAddress2PositionInfos(user.address,0)
+                const postionInfo = await collateralLeverOnUser.s_userAddress2PositionInfos(user.address, 0)
                 console.log(`postion info:"${postionInfo}`)
                 console.log(`cTokenAddressOfTokenBase: ${cTokenAddressOfTokenBase}`)
                 console.log(`cTokenAddressOfTokenQuote: ${cTokenAddressOfTokenQuote}`)
 
-                if(isShort){
+                if (isShort) {
                     assert(cTokenAddressOfTokenBase.toLowerCase() === postionInfo.cTokenBorrowingAddress.toLowerCase())
-                    assert(cTokenAddressOfTokenQuote.toLowerCase() === postionInfo.cTokenCollateralAddress.toLowerCase())                    
-                }else{
+                    assert(cTokenAddressOfTokenQuote.toLowerCase() === postionInfo.cTokenCollateralAddress.toLowerCase())
+                } else {
                     assert(cTokenAddressOfTokenBase.toLowerCase() === postionInfo.cTokenCollateralAddress.toLowerCase())
-                    assert(cTokenAddressOfTokenQuote.toLowerCase() === postionInfo.cTokenBorrowingAddress.toLowerCase())                    
-                }                
-                if(investmentIsQuote){
-                    assert(oldUserTokenQuoteAmount == await getERC20Balance(tokenQuote,user.address) + investmentAmount)
-                }else{
-                    const curBalance = Number(await getERC20Balance(tokenBase,user.address))
+                    assert(cTokenAddressOfTokenQuote.toLowerCase() === postionInfo.cTokenBorrowingAddress.toLowerCase())
+                }
+                if (investmentIsQuote) {
+                    assert(oldUserTokenQuoteAmount == await getERC20Balance(tokenQuote, user.address) + investmentAmount)
+                } else {
+                    const curBalance = Number(await getERC20Balance(tokenBase, user.address))
                     assert(oldUserTokenBaseAmount == curBalance + Number(investmentAmount))
                 }
-                assert(investmentAmount*lever == postionInfo.collateralAmountOfCollateralToken)
-                assert(isShort === postionInfo.isShort)             
-                
+                assert(investmentAmount * lever == postionInfo.collateralAmountOfCollateralToken)
+                assert(isShort === postionInfo.isShort)
+
             })
         })
 
         describe("closePosition", () => {
             beforeEach(async () => {
-                await approveERC20(DAIAddress, user,collateralLeverOnUser.address, investmentAmount )
+                await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
                 await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.emit(collateralLeverOnUser, "OpenPositionSucc")
             })
             it("modifier OwnerOfPosition", async () => {
                 await expect(collateralLeverOnUser.closePosition(3333)).to.be.revertedWith("CollateralLever__notOwnerOfPosition")
             })
-            it("modifier OwnerOfPosition", async () => {
-                await expect(collateralLeverOnUser.closePosition(3333)).to.be.revertedWith("CollateralLever__notOwnerOfPosition")
+            it("emit ClosePositionSucc  and check s_userAddress2PositionInfos", async () => {
+                // await expect(collateralLeverOnUser.closePosition(1))
+                await expect(collateralLeverOnUser.closePosition(1)).to.emit(collateralLeverOnUser, "ClosePositionSucc")
+                const postionInfo = await collateralLeverOnUser.s_userAddress2PositionInfos(user.address, 0)
+                console.log(`postion info:"${postionInfo}`)
+
+                assert("0x0000000000000000000000000000000000000000" === postionInfo.cTokenBorrowingAddress.toLowerCase())
+                assert("0x0000000000000000000000000000000000000000" === postionInfo.cTokenCollateralAddress.toLowerCase())
+
+                assert(0 == postionInfo.positionId)
+                assert(0 == postionInfo.collateralAmountOfCollateralToken)
+                assert(0 == postionInfo.borrowedAmountOfBorrowingToken)
             })
         })
         describe("uniswapV2Call", () => {
             beforeEach(async () => {
-                await collateralLeverOnDeployer.addItem(baseNFT.address, TOKEN_ID, PRICE)
+                //todo
             })
-            it("modifier AlreadyAdded", async () => {
-                await expect(collateralLeverOnUser.buyNFT(baseNFT.address, TOKEN_ID_Of_USER)).to.be.revertedWith("NFTMarketplace__NotAdded")
-            })
-            it("revert if price not met", async () => {
-                const inputPrice = ethers.utils.parseEther("0.009")
-                await expect(collateralLeverOnUser.buyNFT(baseNFT.address, TOKEN_ID, { value: inputPrice })).to.be.revertedWith("NFTMarketplace__BuyWithNotEnoughValue")
-            })
-            it("emit event", async () => {
-                await expect(collateralLeverOnUser.buyNFT(baseNFT.address, TOKEN_ID, { value: PRICE })).to.emit(collateralLeverOnUser, "BuyNFT")
-            })
-
-            it("item check", async () => {
-                await collateralLeverOnUser.buyNFT(baseNFT.address, TOKEN_ID, { value: PRICE })
-                const item = await collateralLeverOnUser.getAddedItem(baseNFT.address, TOKEN_ID)
-                const proceeds = await collateralLeverOnDeployer.getProceeds(deployer.address)
-                assert(item.price.toString() == 0)
-                assert(proceeds.toString() == PRICE.toString())
-            })
-            it("balance of marketplace contract is PRICE", async () => {
-                await collateralLeverOnUser.buyNFT(baseNFT.address, TOKEN_ID, { value: PRICE })
-                const marketplaceBalance = await ethers.provider.getBalance(collateralLeverOnDeployer.address)
-                assert(marketplaceBalance.toString() == PRICE.toString())
-            })
+            it("test", async () => {
+                //todo
+            })           
         })
     })
 
@@ -165,7 +155,7 @@ const ERC20TokenWithSigner = async (tokenAddress, signerAccount) => {
     return await ethers.getContractAt(erc20Abi, tokenAddress, signerAccount)
 }
 
-const approveERC20 = async(tokenAddress, from, to, amount)=>{
+const approveERC20 = async (tokenAddress, from, to, amount) => {
     const DAIWithUser = await ERC20TokenWithSigner(tokenAddress, from)
     await DAIWithUser.approve(to, amount)
 }
