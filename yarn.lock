@@ -28,6 +28,11 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
+"@compound-finance/compound-js@^0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@compound-finance/compound-js/-/compound-js-0.5.1.tgz#b1f445811445df26d9e7f9d9d2ef81950c36a5ec"
+  integrity sha512-aCJk8e5ApDgAUAYjtlSTLA2Z+/fdzHc0ho/ZmpwsBPjuMLoNVWN5okh5vIgEALDWtTAHRd3PvrDtDms8+bH4CA==
+
 "@ensdomains/ens@^0.4.4":
   version "0.4.5"
   resolved "https://registry.yarnpkg.com/@ensdomains/ens/-/ens-0.4.5.tgz#e0aebc005afdc066447c6e22feb4eda89a5edbfc"

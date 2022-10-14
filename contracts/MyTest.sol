@@ -237,7 +237,7 @@ contract MyTest {
         // emit MyLog('Current ETH Borrow Rate', borrowRateMantissa);
 
         // Borrow a fixed amount of ETH below our maximum borrow amount
-        uint256 numWeiToBorrow = 3;
+        uint256 numWeiToBorrow = 300;
 
         console.log(
             "before compound borrow, borrowingCToken amount of this:%s",
@@ -266,6 +266,142 @@ contract MyTest {
         );
 
         uint256 borrows = cEth.borrowBalanceCurrent(address(this));
+        emit MyLog("Current ETH borrow amount", borrows);
+
+        return borrows;
+    }
+
+    function erc20BorrowErc20Example(Param calldata param)
+        public
+        returns (uint)
+    {
+        CErc20 cTokenBorrow = CErc20(param._cEtherAddress);
+        Comptroller comptroller = Comptroller(param._comptrollerAddress);
+        CErc20 cTokenCollateral = CErc20(param._cTokenAddress);
+        Erc20 underlyingCollateral = Erc20(param._underlyingAddress);
+
+        // Approve transfer of underlying
+        underlyingCollateral.approve(
+            param._cTokenAddress,
+            param._underlyingToSupplyAsCollateral
+        );
+
+        console.log(
+            "ctoken.underlying == param._underlyingAddress? %s, %s",
+            cTokenCollateral.underlying(),
+            param._underlyingAddress
+        );
+        console.log(
+            "before compound mint, collateralCToken amount of this:%s",
+            _ERC20BalanceOf(param._cTokenAddress, address(this))
+        );
+        console.log(
+            "before compound mint, collateralToken amount of this:%s",
+            _ERC20BalanceOf(cTokenCollateral.underlying(), address(this))
+        );
+
+        (
+            uint256 error22,
+            uint256 liquidity22,
+            uint256 shortfall22
+        ) = comptroller.getAccountLiquidity(address(this));
+
+        console.log(
+            "before compound mint, getAccountLiquidity of this:%s, %s, %s",
+            error22,
+            liquidity22,
+            shortfall22
+        );
+
+        // Supply underlying as collateral, get cToken in return
+        uint256 error = cTokenCollateral.mint(
+            param._underlyingToSupplyAsCollateral
+        );
+        require(error == 0, "CErc20.mint Error");
+
+        console.log(
+            "after compound mint, collateralCToken amount of this:%s",
+            _ERC20BalanceOf(param._cTokenAddress, address(this))
+        );
+        console.log(
+            "after compound mint, collateralToken amount of this:%s",
+            _ERC20BalanceOf(cTokenCollateral.underlying(), address(this))
+        );
+
+        (error22, liquidity22, shortfall22) = comptroller.getAccountLiquidity(
+            address(this)
+        );
+
+        console.log(
+            "after compound mint, getAccountLiquidity of this:%s, %s, %s",
+            error22,
+            liquidity22,
+            shortfall22
+        );
+
+        // Enter the market so you can borrow another type of asset
+        address[] memory cTokens = new address[](1);
+        cTokens[0] = param._cTokenAddress;
+        uint256[] memory errors = comptroller.enterMarkets(cTokens);
+        if (errors[0] != 0) {
+            revert("Comptroller.enterMarkets failed.");
+        }
+
+        // Get my account's total liquidity value in Compound
+        (uint256 error2, uint256 liquidity, uint256 shortfall) = comptroller
+            .getAccountLiquidity(address(this));
+        if (error2 != 0) {
+            revert("Comptroller.getAccountLiquidity failed.");
+        }
+        require(shortfall == 0, "account underwater");
+        require(liquidity > 0, "account has excess collateral");
+
+        // Borrowing near the max amount will result
+        // in your account being liquidated instantly
+        emit MyLog("Maximum ETH Borrow (borrow far less!)", liquidity);
+
+        // // Get the collateral factor for our collateral
+        // (
+        //   bool isListed,
+        //   uint collateralFactorMantissa
+        // ) = comptroller.markets(_cTokenAddress);
+        // emit MyLog('Collateral Factor', collateralFactorMantissa);
+
+        // // Get the amount of ETH added to your borrow each block
+        // uint borrowRateMantissa = cEth.borrowRatePerBlock();
+        // emit MyLog('Current ETH Borrow Rate', borrowRateMantissa);
+
+        // Borrow a fixed amount of ETH below our maximum borrow amount
+        uint256 numWeiToBorrow = 300;
+
+        // console.log(
+        //     "before compound borrow, borrowingCToken amount of this:%s",
+        //     _ERC20BalanceOf(param._cEtherAddress, address(this))
+        // );
+        // console.log(
+        //     "before compound borrow, borrowingToken amount of this:%s",
+        //     _ERC20BalanceOf(cTokenBorrow.underlying(), address(this))
+        // );
+
+        // Borrow, then check the underlying balance for this contract's address
+        console.log("before borrow ");
+        error = cTokenBorrow.borrow(numWeiToBorrow);
+        console.log("borrow error:$s", error);
+
+        // console.log(
+        //     "after compound borrow, borrowingCToken amount of this:%s ",
+        //     _ERC20BalanceOf(param._cEtherAddress, address(this))
+        // );
+        // console.log(
+        //     "after compound borrow, borrowingToken amount of this:%s",
+        //     _ERC20BalanceOf(cTokenBorrow.underlying(), address(this))
+        // );
+        // console.log(
+        //     "is eq to borrowingCToken.borrowBalanceCurrent(address(this))?: %s ",
+        //     cTokenBorrow.borrowBalanceCurrent(address(this))
+        // );
+
+        uint256 borrows = cTokenBorrow.borrowBalanceCurrent(address(this));
         emit MyLog("Current ETH borrow amount", borrows);
 
         return borrows;

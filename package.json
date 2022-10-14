@@ -9,6 +9,7 @@
     "coverage": "hardhat coverage"
   },
   "devDependencies": {
+    "@compound-finance/compound-js": "^0.5.1",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13",
     "@nomiclabs/hardhat-etherscan": "^3.0.0",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
