@@ -8,7 +8,7 @@ const moveBlock = async (blockAmounts, sleepMs/*ms*/ = 0) => {
             params: []
         })
         if (sleepMs > 0) {
-            console.log(`mine sleep for ${sleepMs}`)
+            console.log(`mine sleep for ${sleepMs/1000} s`)
             await sleep(sleepMs)
         }
         console.log(`curBlockNum:${await ethers.provider.getBlockNumber()}`)

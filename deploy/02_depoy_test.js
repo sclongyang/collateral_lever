@@ -6,7 +6,8 @@ const abi = require("../constants/ctoken_abi.json")
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
-    const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
+    const waitBlockConfirmations = 1
+    // const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
 
     arguments = []
        
@@ -17,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             args: arguments,
             log: true,
             waitConfirmations: waitBlockConfirmations,
-            // gasLimit:30000000,
+            // gasLimit:4000000,
         }
     )
     console.log(`fermi deploy MyTest address: ${contract.address}`)

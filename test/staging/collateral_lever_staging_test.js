@@ -8,11 +8,12 @@ developmentChains.includes(network.name)
     ? describe.skip : describe("Collateral Lever staging test", () => {
         let collateralLeverOnDeployer, collateralLeverOnUser, deployer, user, DAIAddress
         let tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort
-        const cTokenAddressOfTokenBase = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        const cTokenAddressOfTokenQuote = process.env.MAINNET_COMPOUND_CBAT_ADDRESS
+        const cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
+        const cUNIAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
+        const cTokenAddressOfTokenBase = cDAIAddress
+        const cTokenAddressOfTokenQuote = cUNIAddress
 
         beforeEach(async () => {
-            // await deployments.fixture("all")
             const signers = await ethers.getSigners()
             deployer = signers[0]
             user = signers[1]
@@ -28,31 +29,20 @@ developmentChains.includes(network.name)
             investmentIsQuote = false
             lever = 2
             isShort = false
-
-            //transfer DAI to user
-            DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
-            const addressWithDAI = "0x604981db0C06Ea1b37495265EDa4619c8Eb95A3D"
-            await network.provider.send("hardhat_impersonateAccount", [addressWithDAI])
-            const impersonatedSigner = await ethers.getSigner(addressWithDAI)
-            // const DAIAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F"            
-            const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
-            await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount)
-            // console.log(`balance: deployer: ${await deployer.getBalance()}, user:${await user.getBalance()}`)     
-            // console.log(`tokenBase balance: deployer: ${await getERC20Balance(tokenBase,deployer.address) }, user:${await getERC20Balance(tokenBase,user.address)}`)              
         })
         describe("addSupportedCToken", () => {
             it("event AddSupportedCToken is emitted and check s_token2CToken ", async () => {
-                await expect(collateralLeverOnDeployer.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)).to.emit(collateralLeverOnDeployer, "AddSupportedCToken")
-                underlying = await getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
+                await expect(collateralLeverOnDeployer.addSupportedCToken(process.env.GOERLI_COMPOUND_CDAI_ADDRESS)).to.emit(collateralLeverOnDeployer, "AddSupportedCToken")
+                underlying = await getUnderlyingByCTokenAddress(process.env.GOERLI_COMPOUND_CDAI_ADDRESS)
                 ctokenAddress = await collateralLeverOnUser.s_token2CToken(underlying)
-                assert(ctokenAddress.toLowerCase() === process.env.MAINNET_COMPOUND_CDAI_ADDRESS.toLowerCase())
+                assert(ctokenAddress.toLowerCase() === process.env.GOERLI_COMPOUND_CDAI_ADDRESS.toLowerCase())
             })
             it("revert when param is not ctoken address", async () => {
-                await expect(collateralLeverOnDeployer.addSupportedCToken(process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS)).to.be.reverted
+                await expect(collateralLeverOnDeployer.addSupportedCToken(process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS)).to.be.reverted
             })
 
             it("not owner revert", async () => {
-                await expect(collateralLeverOnUser.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)).to.be.revertedWith("Ownable: caller is not the owner")
+                await expect(collateralLeverOnUser.addSupportedCToken(process.env.GOERLI_COMPOUND_CDAI_ADDRESS)).to.be.revertedWith("Ownable: caller is not the owner")
             })
         })
 
@@ -70,11 +60,11 @@ developmentChains.includes(network.name)
                 await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.be.revertedWith("CollateralLever__leverIsWrong")
             })
             it("revert: not supported tokenBase", async () => {
-                tokenBase = process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS
+                tokenBase = process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS
                 await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.be.revertedWith("CollateralLever__tokenNotSupport")
             })
             it("revert: not supported tokenQuote", async () => {
-                tokenQuote = process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS
+                tokenQuote = process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS
                 await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.be.revertedWith("CollateralLever__tokenNotSupport")
             })
 
@@ -137,7 +127,7 @@ developmentChains.includes(network.name)
             })
             it("test", async () => {
                 //todo
-            })           
+            })
         })
     })
 

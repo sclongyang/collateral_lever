@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol";
-// import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
-// import "./interfaces/IUniswapV2Pair.sol";
-// import "./interfaces/IUniswapV2Callee.sol";
 import "./libraries/UniswapV2Library.sol";
 import "./interfaces/IUniswapV2Router.sol";
 import "./interfaces/ICErc20.sol";
 import "./interfaces/ICEth.sol";
 import "./interfaces/IComptroller.sol";
+// import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
+// import "./interfaces/IUniswapV2Pair.sol";
+// import "./interfaces/IUniswapV2Callee.sol";
 
 error CollateralLever__notOwnerOfPosition();
 error CollateralLever__notFindPosition(address user, uint256 positionId);
@@ -71,16 +71,11 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     constructor(
         address uniswapV2Router,
         address uniswapV2Factory,
-        address comptroller,
-        address[] memory cTokenAddresses
+        address comptroller
     ) {
         i_uniswapV2RouterAddress = uniswapV2Router;
         i_uniswapV2FactoryAddress = uniswapV2Factory;
         i_comptrollerAddress = comptroller;
-
-        for (uint256 i = 0; i < cTokenAddresses.length; ++i) {
-            s_token2CToken[ICErc20(cTokenAddresses[i]).underlying()] = cTokenAddresses[i];
-        }
     }
 
     receive() external payable {
@@ -100,6 +95,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 lever,
         bool isShort
     ) external {
+        uint256 startGas = gasleft();
+
         if (tokenBase == tokenQuote) {
             revert CollateralLever__tokenBaseEqTokenQuote();
         }
@@ -113,24 +110,33 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         _checkTokenSupported(tokenBase);
         _checkTokenSupported(tokenQuote);
 
+        console.log("2 gasused %s", startGas - gasleft());
+
         //资金转移到本合约
         address investmentToken = investmentIsQuote ? tokenQuote : tokenBase;
         // _safeApprove(investmentToken, address(this), investmentAmount);
+        console.log("2.1 gasused %s", startGas - gasleft());
 
         _safeTransferFrom(investmentToken, msg.sender, address(this), investmentAmount);
+        console.log("2.6 gasused %s", startGas - gasleft());
 
         address collateralToken;
         address borrowingToken;
+        console.log("2.7 gasused %s", startGas - gasleft());
 
         //calculate originalCollateralAmount初始抵押量
         uint256 originalCollateralAmount = investmentAmount;
+        console.log("2.8 gasused %s", startGas - gasleft());
+
         if (isShort) {
             collateralToken = tokenQuote;
             borrowingToken = tokenBase;
         } else {
             collateralToken = tokenBase;
             borrowingToken = tokenQuote;
+            console.log("2.9 gasused %s", startGas - gasleft());
         }
+        console.log("3 gasused %s", startGas - gasleft());
 
         //投入的token不是抵押物token, 则需swap
         if (investmentToken != collateralToken) {
@@ -149,6 +155,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
                 block.timestamp + SWAP_DEADLINE
             );
         }
+        console.log("4 gasused %s", startGas - gasleft());
 
         //flashswap
         uint256 flashSwapAmountOfCollateralToken = originalCollateralAmount * (lever - 1);
@@ -174,8 +181,10 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         flashSwapPath[0] = borrowingToken;
         flashSwapPath[1] = collateralToken;
         s_flashSwapPath = flashSwapPath;
+        console.log("5 gasused %s", startGas - gasleft());
 
         IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
+        console.log("6 gasused %s", startGas - gasleft());
     }
 
     function closePosition(
@@ -426,7 +435,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         emit OpenPositionSucc(user, newPosition);
     }
 
-    // 参考 https://github.com/compound-developers/compound-borrow-examples/blob/master/contracts/MyContracts.sol
+    // // 参考 https://github.com/compound-developers/compound-borrow-examples/blob/master/contracts/MyContracts.sol
     function _borrow(
         address collateralCTokenAddress,
         address borrowingCTokenAddress,
@@ -514,6 +523,15 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (!IERC20(token).transferFrom(from, to, value)) {
             revert CollateralLever__transferFromFailed();
         }
+    }
+
+    function testTransferFrom(
+        address token,
+        address from,
+        address to,
+        uint256 value
+    ) external {
+        _safeTransferFrom(token, from, to, value);
     }
 
     function _ERC20BalanceOf(address token, address user) internal view returns (uint256) {

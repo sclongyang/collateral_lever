@@ -52,7 +52,12 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             })
 
             it("not owner revert", async () => {
-                await expect(collateralLeverOnUser.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)).to.be.revertedWith("Ownable: caller is not the owner")
+                await expect(collateralLeverOnUser.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)).to.be.revertedWith("Ownable: caller is not the owner")                
+            })
+            it("event_value", async () => {
+                tx = await collateralLeverOnDeployer.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS,{gasLimit:4100003})
+                txReceipt = await tx.wait(1)
+                console.log(`addr"${txReceipt.events[0].args.cTokenAddress}`) 
             })
         })
 
@@ -76,6 +81,10 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             it("revert: not supported tokenQuote", async () => {
                 tokenQuote = process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS
                 await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.be.revertedWith("CollateralLever__tokenNotSupport")
+            })
+            it("just_openposition", async () => {       
+                await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
+                await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
             })
 
             it("emit OpenPositionSucc and check s_userAddress2PositionInfos", async () => {

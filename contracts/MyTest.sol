@@ -372,7 +372,7 @@ contract MyTest {
         // emit MyLog('Current ETH Borrow Rate', borrowRateMantissa);
 
         // Borrow a fixed amount of ETH below our maximum borrow amount
-        uint256 numWeiToBorrow = 300;
+        uint256 numWeiToBorrow = 200;
 
         // console.log(
         //     "before compound borrow, borrowingCToken amount of this:%s",

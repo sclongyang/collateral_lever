@@ -5,38 +5,44 @@ const { verify } = require("../utils/verify")
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
-    const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
+    // const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
+    const waitBlockConfirmations = 1
 
-    cTokens = []
-    arguments = []
-    if(developmentChains.includes(network.name)){
-        //fork mainnet
-        cTokens = [process.env.MAINNET_COMPOUND_CDAI_ADDRESS,process.env.MAINNET_COMPOUND_CBAT_ADDRESS,process.env.MAINNET_COMPOUND_CUSDC_ADDRESS]
-        arguments = [process.env.MAINNET_UNISWAP_V2_ROUTER02_ADDRESS,process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS,process.env.MAINNET_COMPTROLLER_ADDRESS,cTokens]     
-    }else{
-        //goerli
-        cTokens = [process.env.GOERLI_COMPOUND_CDAI_ADDRESS,process.env.GOERLI_COMPOUND_CETH_ADDRESS,process.env.GOERLI_COMPOUND_CUSDC_ADDRESS]
-        arguments = [process.env.GOERLI_UNISWAP_V2_ROUTER02_ADDRESS,process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS,process.env.GOERLI_COMPTROLLER_ADDRESS,cTokens]    
+    let cTokens = []
+    let arguments = []
+    const isLocal = developmentChains.includes(network.name)
+    if (isLocal) {
+        //fork mainnet        
+        arguments = [process.env.MAINNET_UNISWAP_V2_ROUTER02_ADDRESS, process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS, process.env.MAINNET_COMPTROLLER_ADDRESS]
+        cTokens = [process.env.MAINNET_COMPOUND_CDAI_ADDRESS, process.env.MAINNET_COMPOUND_CBAT_ADDRESS, process.env.MAINNET_COMPOUND_CUSDC_ADDRES]
+    } else {
+        //goerli        
+        arguments = [process.env.GOERLI_UNISWAP_V2_ROUTER02_ADDRESS, process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS, process.env.GOERLI_COMPTROLLER_ADDRESS]
+        cTokens = [process.env.GOERLI_COMPOUND_CDAI_ADDRESS, process.env.GOERLI_COMPOUND_CETH_ADDRESS, process.env.GOERLI_COMPOUND_CUSDC_ADDRESS]
     }
-    
+
     console.log("begin deploy")
     const collateralLever = await deploy("CollateralLever",
         {
             from: deployer,
             args: arguments,
             log: true,
-            waitConfirmations: waitBlockConfirmations,            
-            gasLimit:7229450,
+            waitConfirmations: waitBlockConfirmations,
+            gasLimit: 4229450,
         }
     )
     console.log(`fermi deploy CollateralLever address: ${collateralLever.address}`)
-    
-    if(!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY){
-        await verify(collateralLever.address, arguments)        
-    }
-    console.log("------------------------------")    
 
-    
+    if (!isLocal && process.env.ETHERSCAN_API_KEY) {
+        await verify(collateralLever.address, arguments)
+    }
+    //add cTokens
+    console.log(`addSupportedCToken 3 cTokens for init`)
+    collateralContract = await ethers.getContract("CollateralLever", deployer)
+    cTokens.forEach(async element => {
+        await collateralContract.addSupportedCToken(element)
+    });
+    console.log("------------------------------")
 }
 
 module.exports.tags = ["all", "collaterallever"]
