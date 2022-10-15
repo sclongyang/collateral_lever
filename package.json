@@ -6,7 +6,8 @@
     "lint": "solhint 'contracts/*.sol'",
     "lint:fix": "solhint 'contracts/**/*.sol' --fix",
     "format": "prettier --write .",
-    "coverage": "hardhat coverage"
+    "coverage": "hardhat coverage",
+    "forkmainnet": "hardhat node --fork https://eth-mainnet.g.alchemy.com/v2/yvn1o6H9r3OPkFP2BN378LdA8EKLCPvr --fork-block-number 15733251"
   },
   "devDependencies": {
     "@compound-finance/compound-js": "^0.5.1",

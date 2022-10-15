@@ -59,9 +59,12 @@ module.exports = {
         deployer: {
             default: 0, 
             1: 0, 
+            31337:0,
         },
         user: {
             default: 1,
+            1: 1, 
+            31337:1,
         },
     },
     solidity: {

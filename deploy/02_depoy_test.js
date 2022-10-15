@@ -5,13 +5,17 @@ const abi = require("../constants/ctoken_abi.json")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
-    const { deployer } = await getNamedAccounts()
-    const waitBlockConfirmations = 1
-    // const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
+    // const { deployer ,user} = await getNamedAccounts()
+    const signers = await ethers.getSigners()
+    const deployer = signers[0]
+    const user = signers[1]
+
+
+    const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
 
     arguments = []
-       
-    console.log("begin deploy")
+    console.log(`deployer:${deployer.address}`)
+    console.log("begin deploy MyTest")
     const contract = await deploy("MyTest",
         {
             from: deployer,
@@ -22,17 +26,17 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         }
     )
     console.log(`fermi deploy MyTest address: ${contract.address}`)
-    
-    if(!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY){
-        await verify(contract.address, arguments)        
-    }   
-    console.log(`blocknum:${await ethers.provider.getBlockNumber()}`) 
-    console.log("------------------------------")    
+
+    if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
+        await verify(contract.address, arguments)
+    }
+    console.log(`blocknum:${await ethers.provider.getBlockNumber()}`)
+    console.log("------------------------------")
 
     // mainnetCTokenDAI = process.env.MAINNET_COMPOUND_CBAT_ADDRESS
     // myTestContract = await ethers.getContract("MyTest", deployer)
     // console.log(`getUnderlying: ${await myTestContract.getUnderlying(mainnetCTokenDAI)}`)
-    
+
     // ctoken = await ethers.getContractAt(abi, mainnetCTokenDAI,deployer)
     // console.log(`ctoken->token: ${await ctoken.underlying()}`)
 

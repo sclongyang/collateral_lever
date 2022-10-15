@@ -9,7 +9,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
         let collateralLeverOnDeployer, collateralLeverOnUser, deployer, user, DAIAddress
         let tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort
         const cTokenAddressOfTokenBase = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        const cTokenAddressOfTokenQuote = process.env.MAINNET_COMPOUND_CBAT_ADDRESS
+        const cTokenAddressOfTokenQuote = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
 
         beforeEach(async () => {
             await deployments.fixture("all")
@@ -37,6 +37,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             // const DAIAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F"            
             const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
             await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount)
+
             // console.log(`balance: deployer: ${await deployer.getBalance()}, user:${await user.getBalance()}`)     
             // console.log(`tokenBase balance: deployer: ${await getERC20Balance(tokenBase,deployer.address) }, user:${await getERC20Balance(tokenBase,user.address)}`)              
         })
@@ -52,12 +53,12 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             })
 
             it("not owner revert", async () => {
-                await expect(collateralLeverOnUser.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)).to.be.revertedWith("Ownable: caller is not the owner")                
+                await expect(collateralLeverOnUser.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)).to.be.revertedWith("Ownable: caller is not the owner")
             })
             it("event_value", async () => {
-                tx = await collateralLeverOnDeployer.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS,{gasLimit:4100003})
+                tx = await collateralLeverOnDeployer.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS, { gasLimit: 4100003 })
                 txReceipt = await tx.wait(1)
-                console.log(`addr"${txReceipt.events[0].args.cTokenAddress}`) 
+                console.log(`addr"${txReceipt.events[0].args.cTokenAddress}`)
             })
         })
 
@@ -82,11 +83,6 @@ const erc20Abi = require("../../constants/erc20_abi.json")
                 tokenQuote = process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS
                 await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.be.revertedWith("CollateralLever__tokenNotSupport")
             })
-            it("just_openposition", async () => {       
-                await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-                await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
-            })
-
             it("emit OpenPositionSucc and check s_userAddress2PositionInfos", async () => {
                 const oldUserTokenBaseAmount = Number(await getERC20Balance(tokenBase, user.address))
                 const oldUserTokenQuoteAmount = Number(await getERC20Balance(tokenQuote, user.address))
@@ -114,7 +110,10 @@ const erc20Abi = require("../../constants/erc20_abi.json")
                 }
                 assert(investmentAmount * lever == postionInfo.collateralAmountOfCollateralToken)
                 assert(isShort === postionInfo.isShort)
-
+            })
+            it("just_openposition", async () => {
+                await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
+                await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
             })
         })
 
@@ -146,7 +145,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             })
             it("test", async () => {
                 //todo
-            })           
+            })
         })
     })
 
