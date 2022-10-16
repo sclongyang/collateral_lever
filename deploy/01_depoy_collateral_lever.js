@@ -43,9 +43,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
     console.log(`blocknum:${await ethers.provider.getBlockNumber()}`)
     //add cTokens
+    const collateralLeverOnDeployer = await ethers.getContract("CollateralLever", deployer)
     console.log(`addSupportedCToken 3 cTokens for init`)
     cTokens.forEach(async element => {
-        const tx = await collateralContract.addSupportedCToken(element)
+        const tx = await collateralLeverOnDeployer.addSupportedCToken(element)
     });
 
 

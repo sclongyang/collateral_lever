@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -85,26 +85,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     function addSupportedCToken(address cTokenAddress) external onlyOwner {
         s_token2CToken[ICErc20(cTokenAddress).underlying()] = cTokenAddress;
         emit AddSupportedCToken(cTokenAddress);
-    }
-
-    function testTransferFromAll(
-        address token,
-        address from,
-        address to,
-        uint256 value
-    ) external {
-        console.log("investmentToken: %s, from:%s", token, from);
-        console.log("to:%s, amount:%s", to, value);
-
-        _safeTransferFrom(token, from, to, value);
-    }
-
-    function testTransferFrom2Params(address token, uint256 value) external {
-        console.log("investmentToken: %s, from:%s", token, msg.sender);
-        console.log("to:%s, amount:%s", address(this), value);
-
-        _safeTransferFrom(token, msg.sender, address(this), value);
-    }
+    }    
 
     function openPosition(
         address tokenBase,
@@ -114,7 +95,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 lever,
         bool isShort
     ) external {
-        uint256 startGas = gasleft();
 
         if (tokenBase == tokenQuote) {
             revert CollateralLever__tokenBaseEqTokenQuote();
@@ -129,83 +109,71 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         _checkTokenSupported(tokenBase);
         _checkTokenSupported(tokenQuote);
 
-        console.log("2 gasused %s", startGas - gasleft());
 
         //资金转移到本合约
         address investmentToken = investmentIsQuote ? tokenQuote : tokenBase;
-        // _safeApprove(investmentToken, address(this), investmentAmount);
-        console.log("2.1 gasused %s", startGas - gasleft());
-        console.log("investmentToken: %s, from:%s", investmentToken, msg.sender);
-        console.log("to:%s, amount:%s", address(this), investmentAmount);
+        // _safeApprove(investmentToken, address(this), investmentAmount);        
 
         _safeTransferFrom(investmentToken, msg.sender, address(this), investmentAmount);
-        console.log("2.6 gasused %s", startGas - gasleft());
 
-        // address collateralToken;
-        // address borrowingToken;
-        // console.log("2.7 gasused %s", startGas - gasleft());
+        address collateralToken;
+        address borrowingToken;
 
-        // //calculate originalCollateralAmount初始抵押量
-        // uint256 originalCollateralAmount = investmentAmount;
-        // console.log("2.8 gasused %s", startGas - gasleft());
+        //calculate originalCollateralAmount初始抵押量
+        uint256 originalCollateralAmount = investmentAmount;
 
-        // if (isShort) {
-        //     collateralToken = tokenQuote;
-        //     borrowingToken = tokenBase;
-        // } else {
-        //     collateralToken = tokenBase;
-        //     borrowingToken = tokenQuote;
-        //     console.log("2.9 gasused %s", startGas - gasleft());
-        // }
-        // console.log("3 gasused %s", startGas - gasleft());
+        if (isShort) {
+            collateralToken = tokenQuote;
+            borrowingToken = tokenBase;
+        } else {
+            collateralToken = tokenBase;
+            borrowingToken = tokenQuote;
+        }
 
-        // //投入的token不是抵押物token, 则需swap
-        // if (investmentToken != collateralToken) {
-        //     address[] memory path = new address[](2);
-        //     if (collateralToken == tokenBase) {
-        //         path[0] = tokenQuote;
-        //         path[1] = tokenBase;
-        //     } else {
-        //         path[0] = tokenBase;
-        //         path[1] = tokenQuote;
-        //     }
-        //     originalCollateralAmount = _swapToCollateral(
-        //         investmentAmount,
-        //         path,
-        //         address(this),
-        //         block.timestamp + SWAP_DEADLINE
-        //     );
-        // }
-        // console.log("4 gasused %s", startGas - gasleft());
+        //投入的token不是抵押物token, 则需swap
+        if (investmentToken != collateralToken) {
+            address[] memory path = new address[](2);
+            if (collateralToken == tokenBase) {
+                path[0] = tokenQuote;
+                path[1] = tokenBase;
+            } else {
+                path[0] = tokenBase;
+                path[1] = tokenQuote;
+            }
+            originalCollateralAmount = _swapToCollateral(
+                investmentAmount,
+                path,
+                address(this),
+                block.timestamp + SWAP_DEADLINE
+            );
+        }
 
-        // //flashswap
-        // uint256 flashSwapAmountOfCollateralToken = originalCollateralAmount * (lever - 1);
-        // address pair = UniswapV2Library.pairFor(i_uniswapV2FactoryAddress, tokenBase, tokenQuote);
-        // bytes memory data = abi.encode(
-        //     collateralToken,
-        //     borrowingToken,
-        //     originalCollateralAmount,
-        //     msg.sender,
-        //     isShort,
-        //     true, //开仓:true, 平仓: false
-        //     uint256(0) //没有positionId
-        // );
-        // (address token0, ) = UniswapV2Library.sortTokens(tokenBase, tokenQuote);
-        // uint256 amount0;
-        // uint256 amount1;
-        // if (token0 == collateralToken) {
-        //     amount0 = flashSwapAmountOfCollateralToken;
-        // } else {
-        //     amount1 = flashSwapAmountOfCollateralToken;
-        // }
-        // address[] memory flashSwapPath = new address[](2);
-        // flashSwapPath[0] = borrowingToken;
-        // flashSwapPath[1] = collateralToken;
-        // s_flashSwapPath = flashSwapPath;
-        // console.log("5 gasused %s", startGas - gasleft());
+        //flashswap
+        uint256 flashSwapAmountOfCollateralToken = originalCollateralAmount * (lever - 1);
+        address pair = UniswapV2Library.pairFor(i_uniswapV2FactoryAddress, tokenBase, tokenQuote);
+        bytes memory data = abi.encode(
+            collateralToken,
+            borrowingToken,
+            originalCollateralAmount,
+            msg.sender,
+            isShort,
+            true, //开仓:true, 平仓: false
+            uint256(0) //没有positionId
+        );
+        (address token0, ) = UniswapV2Library.sortTokens(tokenBase, tokenQuote);
+        uint256 amount0;
+        uint256 amount1;
+        if (token0 == collateralToken) {
+            amount0 = flashSwapAmountOfCollateralToken;
+        } else {
+            amount1 = flashSwapAmountOfCollateralToken;
+        }
+        address[] memory flashSwapPath = new address[](2);
+        flashSwapPath[0] = borrowingToken;
+        flashSwapPath[1] = collateralToken;
+        s_flashSwapPath = flashSwapPath;
 
-        // IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
-        // console.log("6 gasused %s", startGas - gasleft());
+        IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
     }
 
     function closePosition(
@@ -540,9 +508,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address from,
         address to,
         uint256 value
-    ) internal {
-        console.log("in _safeTransferFrom   investmentToken: %s, from:%s", token, from);
-        console.log("in _safeTransferFrom   to:%s, amount:%s", to, value);
+    ) internal {        
         if (!IERC20(token).transferFrom(from, to, value)) {
             revert CollateralLever__transferFromFailed();
         }
@@ -586,5 +552,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
     function getComptrollerAddress() external view returns (address) {
         return i_comptrollerAddress;
+    }
+    function getPositionNumber(address user) external view returns (uint256) {
+        return s_userAddress2PositionInfos[user].length;
     }
 }

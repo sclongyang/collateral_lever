@@ -57,35 +57,31 @@ async function openPosition() {
 
     console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-    console.log(`tokenbase:${tokenBase}, tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},lever:${lever},isShort:${isShort} `)
-    console.log(`before s_token2CToken[tokenBase]:${await collateralLeverOnUser.s_token2CToken(tokenBase)}`)
-    console.log(`before s_token2CToken[tokenQuote]:${await collateralLeverOnUser.s_token2CToken(tokenQuote)}`)
 
     const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress)
     const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress)
-    console.log(`qqq`)
+    console.log(`addSupportedCToken`)
+
     const txAddReceipt = await txAdd.wait(1)
     const txAdd2Receipt = await txAdd2.wait(1)
-
-    console.log(`after s_token2CToken[tokenBase]:${await collateralLeverOnUser.s_token2CToken(tokenBase)}`)
-    console.log(`after s_token2CToken[tokenQuote]:${await collateralLeverOnUser.s_token2CToken(tokenQuote)}`)
+    console.log(`added ctokenAddress: ${txAddReceipt.events[0].args.cTokenAddress}`)
 
     const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
-    // const tx = await collateralLeverOnUser.testTransferFromAll(DAIAddress, user.address, collateralLeverOnUser.address, investmentAmount, { gasLimit: 9100000 })
 
     console.log(`5555`)
-    // const tx = await collateralLeverOnUser.testTransferFrom2Params(DAIAddress, investmentAmount, { gasLimit: 9200000 })
-    console.log(`5555.111`)
 
     const txReceipt = await tx.wait(1)
     console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
 
-    console.log(`6666`)
+    const userPostionNum = await collateralLeverOnDeployer.getPositionNumber(user.address)
+    console.log(`user postion num:${userPostionNum}`)
+    if (userPostionNum > 0) {
+        const postionInfo = await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, userPostionNum - 1)
+        console.log(`last postionInfo:${postionInfo.positionId}, collateralAmountOfCollateralToken:${postionInfo.collateralAmountOfCollateralToken},borrowedAmountOfBorrowingToken:${postionInfo.borrowedAmountOfBorrowingToken}`)
+        console.log(`last 222:${postionInfo}`)
+    }
 
-
-    // console.log(`collateralLever addr: ${collateralLeverOnUser.address}, positionId: ${txReceipt.events[0].args.positionInfo.positionId},positionInfo: ${txReceipt.events[0].args.positionInfo}`)
-    // console.log(`collateralLever addr: ${collateralLeverOnUser.address},sss: ${ txReceipt.events[0].args.cTokenAddress}`)
-    console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
+    // console.log(`collateralLever addr: ${collateralLeverOnUser.address}, positionId: ${txReceipt.events[0].args.positionInfo.positionId},positionInfo: ${txReceipt.events[0].args.positionInfo}`)    
 
     if (network.config.chainId == 31337) {
         console.log(`7777`)
