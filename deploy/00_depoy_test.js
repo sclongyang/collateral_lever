@@ -18,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     console.log("begin deploy MyTest")
     const contract = await deploy("MyTest",
         {
-            from: deployer,
+            from: deployer.address,
             args: arguments,
             log: true,
             waitConfirmations: waitBlockConfirmations,
@@ -30,7 +30,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
         await verify(contract.address, arguments)
     }
-    console.log(`blocknum:${await ethers.provider.getBlockNumber()}`)
     console.log("------------------------------")
 
     // mainnetCTokenDAI = process.env.MAINNET_COMPOUND_CBAT_ADDRESS

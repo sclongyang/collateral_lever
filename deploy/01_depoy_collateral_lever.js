@@ -6,7 +6,7 @@ const erc20Abi = require("../constants/erc20_abi.json")
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
-    const { deployer ,user} = await getNamedAccounts()
+    const { deployer, user } = await getNamedAccounts()
     // const waitBlockConfirmations = developmentChains.includes(network.name) ? 1 : VERIFICATION_BLOCK_CONFIRMATIONS
     const waitBlockConfirmations = 1
 
@@ -22,7 +22,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         arguments = [process.env.GOERLI_UNISWAP_V2_ROUTER02_ADDRESS, process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS, process.env.GOERLI_COMPTROLLER_ADDRESS]
         cTokens = [process.env.GOERLI_COMPOUND_CDAI_ADDRESS, process.env.GOERLI_COMPOUND_CUNI_ADDRESS, process.env.GOERLI_COMPOUND_CUSDC_ADDRESS]
     }
-    console.log(`deployer:${deployer.address}`)
 
     console.log("begin deploy CollateralLever")
     const collateralLever = await deploy("CollateralLever",
@@ -40,8 +39,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         await verify(collateralLever.address, arguments)
     }
     //add cTokens
-    console.log(`addSupportedCToken 3 cTokens for init`)
     collateralContract = await ethers.getContract("CollateralLever", deployer)
+    console.log(`blocknum:${await ethers.provider.getBlockNumber()}`)
+    console.log(`addSupportedCToken 3 cTokens for init`)
     cTokens.forEach(async element => {
         await collateralContract.addSupportedCToken(element)
     });
