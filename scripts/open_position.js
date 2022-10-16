@@ -6,13 +6,13 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 
 async function openPosition() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
-    let cXXXAddress = process.env.GOERLI_COMPOUND_CUSDC_ADDRESS
+    let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
     let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS        
     let cCOMPAddress = "0x0fF50a12759b081Bb657ADaCf712C52bb015F1Cd"
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        cXXXAddress = process.env.MAINNET_COMPOUND_CUSDC_ADDRESS
+        cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
         comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
         cCOMPAddress = "0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4" //mainnet cCOMP
     }
