@@ -93,17 +93,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address to,
         uint256 value
     ) external {
-        console.log("investmentToken: %s, from:%s", token,from);
+        console.log("investmentToken: %s, from:%s", token, from);
         console.log("to:%s, amount:%s", to, value);
 
         _safeTransferFrom(token, from, to, value);
     }
 
-    function testTransferFrom2Params(
-        address token,
-        uint256 value
-    ) external {
-        console.log("investmentToken: %s, from:%s", token,msg.sender);
+    function testTransferFrom2Params(address token, uint256 value) external {
+        console.log("investmentToken: %s, from:%s", token, msg.sender);
         console.log("to:%s, amount:%s", address(this), value);
 
         _safeTransferFrom(token, msg.sender, address(this), value);
@@ -138,7 +135,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address investmentToken = investmentIsQuote ? tokenQuote : tokenBase;
         // _safeApprove(investmentToken, address(this), investmentAmount);
         console.log("2.1 gasused %s", startGas - gasleft());
-        console.log("investmentToken: %s, from:%s", investmentToken,msg.sender);
+        console.log("investmentToken: %s, from:%s", investmentToken, msg.sender);
         console.log("to:%s, amount:%s", address(this), investmentAmount);
 
         _safeTransferFrom(investmentToken, msg.sender, address(this), investmentAmount);
@@ -544,6 +541,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address to,
         uint256 value
     ) internal {
+        console.log("in _safeTransferFrom   investmentToken: %s, from:%s", token, from);
+        console.log("in _safeTransferFrom   to:%s, amount:%s", to, value);
         if (!IERC20(token).transferFrom(from, to, value)) {
             revert CollateralLever__transferFromFailed();
         }

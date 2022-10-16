@@ -61,14 +61,13 @@ async function openPosition() {
     const tx = await collateralLeverOnUser.testTransferFromAll(DAIAddress, user.address, collateralLeverOnUser.address, investmentAmount, { gasLimit: 9100000 })
 
     console.log(`5555`)
-    const tx2 = await collateralLeverOnUser.testTransferFrom2Params(DAIAddress, investmentAmount, { gasLimit: 9200000 })
+    // const tx = await collateralLeverOnUser.testTransferFrom2Params(DAIAddress, investmentAmount, { gasLimit: 9200000 })
     console.log(`5555.111`)
 
     const txReceipt = await tx.wait(1)
     console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
 
-    console.log(`6666`)
-    const txReceipt2 = await tx2.wait(1)
+    console.log(`6666`)   
 
 
     // console.log(`collateralLever addr: ${collateralLeverOnUser.address}, positionId: ${txReceipt.events[0].args.positionInfo.positionId},positionInfo: ${txReceipt.events[0].args.positionInfo}`)

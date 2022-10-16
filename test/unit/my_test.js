@@ -5,7 +5,7 @@ const ctokenAbi = require("../../constants/ctoken_abi.json")
 const erc20Abi = require("../../constants/erc20_abi.json")
 
 !developmentChains.includes(network.name)
-    ? describe.skip : describe("my test", () => {
+    ? describe.skip : describe("my_test", () => {
         let myTestContractByDeployer, myTestContractByUser, deployer, user
 
         beforeEach(async () => {

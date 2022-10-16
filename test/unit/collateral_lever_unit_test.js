@@ -23,7 +23,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             tokenBase = getUnderlyingByCTokenAddress(cTokenAddressOfTokenBase)
             tokenQuote = getUnderlyingByCTokenAddress(cTokenAddressOfTokenQuote)
             const underlyingDecimalsOfDAI = 18
-            const underlyingAsCollateral = 0.3 //DAI         
+            const underlyingAsCollateral = 0.31 //DAI         
             investmentAmount = (underlyingAsCollateral * Math.pow(10, underlyingDecimalsOfDAI)).toString();
             investmentIsQuote = false
             lever = 2
@@ -112,6 +112,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
                 assert(isShort === postionInfo.isShort)
             })
             it("just_openposition", async () => {
+                console.log(`user:${user.address}`)
                 await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
                 await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
             })
