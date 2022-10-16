@@ -442,10 +442,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             collateralAmountOfCallateralToken
         );
 
-        (uint256 error2, uint256 liquidity, uint256 shortfall) = comptroller.getAccountLiquidity(
-            address(this)
-        );
-
         uint256 error;
 
         // Supply underlying as collateral, get cToken in return
@@ -454,7 +450,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             revert CollateralLever__CErc20MintFailed(error);
         }
 
-        (error2, liquidity, shortfall) = comptroller.getAccountLiquidity(address(this));
+        // (error2, liquidity, shortfall) = comptroller.getAccountLiquidity(address(this));
 
         address[] memory cTokens = new address[](1);
         cTokens[0] = collateralCTokenAddress;

@@ -147,9 +147,7 @@ contract MyTest {
         uint256 _underlyingToSupplyAsCollateral;
     }
 
-    function borrowEthExample(
-        Param calldata param
-    ) public returns (uint256) {
+    function borrowEthExample(Param calldata param) public returns (uint256) {
         CEth cEth = CEth(param._cEtherAddress);
         Comptroller comptroller = Comptroller(param._comptrollerAddress);
         CErc20 cToken = CErc20(param._cTokenAddress);
@@ -250,7 +248,7 @@ contract MyTest {
 
         // Borrow, then check the underlying balance for this contract's address
         error = cEth.borrow(numWeiToBorrow);
-        console.log("cEth.borrow error:$s",error);
+        console.log("cEth.borrow error:$s", error);
 
         console.log(
             "after compound borrow, borrowingCToken amount of this:%s ",
@@ -271,20 +269,14 @@ contract MyTest {
         return borrows;
     }
 
-    function erc20BorrowErc20Example(Param calldata param)
-        public
-        returns (uint)
-    {
+    function erc20BorrowErc20Example(Param calldata param) public returns (uint256) {
         CErc20 cTokenBorrow = CErc20(param._cEtherAddress);
         Comptroller comptroller = Comptroller(param._comptrollerAddress);
         CErc20 cTokenCollateral = CErc20(param._cTokenAddress);
         Erc20 underlyingCollateral = Erc20(param._underlyingAddress);
 
         // Approve transfer of underlying
-        underlyingCollateral.approve(
-            param._cTokenAddress,
-            param._underlyingToSupplyAsCollateral
-        );
+        underlyingCollateral.approve(param._cTokenAddress, param._underlyingToSupplyAsCollateral);
 
         console.log(
             "ctoken.underlying == param._underlyingAddress? %s, %s",
@@ -300,23 +292,18 @@ contract MyTest {
             _ERC20BalanceOf(cTokenCollateral.underlying(), address(this))
         );
 
-        (
-            uint256 error22,
-            uint256 liquidity22,
-            uint256 shortfall22
-        ) = comptroller.getAccountLiquidity(address(this));
+        // (uint256 error22, uint256 liquidity22, uint256 shortfall22) = comptroller
+        //     .getAccountLiquidity(address(this));
 
-        console.log(
-            "before compound mint, getAccountLiquidity of this:%s, %s, %s",
-            error22,
-            liquidity22,
-            shortfall22
-        );
+        // console.log(
+        //     "before compound mint, getAccountLiquidity of this:%s, %s, %s",
+        //     error22,
+        //     liquidity22,
+        //     shortfall22
+        // );
 
         // Supply underlying as collateral, get cToken in return
-        uint256 error = cTokenCollateral.mint(
-            param._underlyingToSupplyAsCollateral
-        );
+        uint256 error = cTokenCollateral.mint(param._underlyingToSupplyAsCollateral);
         require(error == 0, "CErc20.mint Error");
 
         console.log(
@@ -328,16 +315,14 @@ contract MyTest {
             _ERC20BalanceOf(cTokenCollateral.underlying(), address(this))
         );
 
-        (error22, liquidity22, shortfall22) = comptroller.getAccountLiquidity(
-            address(this)
-        );
+        // (error22, liquidity22, shortfall22) = comptroller.getAccountLiquidity(address(this));
 
-        console.log(
-            "after compound mint, getAccountLiquidity of this:%s, %s, %s",
-            error22,
-            liquidity22,
-            shortfall22
-        );
+        // console.log(
+        //     "after compound mint, getAccountLiquidity of this:%s, %s, %s",
+        //     error22,
+        //     liquidity22,
+        //     shortfall22
+        // );
 
         // Enter the market so you can borrow another type of asset
         address[] memory cTokens = new address[](1);
@@ -348,8 +333,9 @@ contract MyTest {
         }
 
         // Get my account's total liquidity value in Compound
-        (uint256 error2, uint256 liquidity, uint256 shortfall) = comptroller
-            .getAccountLiquidity(address(this));
+        (uint256 error2, uint256 liquidity, uint256 shortfall) = comptroller.getAccountLiquidity(
+            address(this)
+        );
         if (error2 != 0) {
             revert("Comptroller.getAccountLiquidity failed.");
         }
@@ -374,32 +360,32 @@ contract MyTest {
         // Borrow a fixed amount of ETH below our maximum borrow amount
         uint256 numWeiToBorrow = 200;
 
-        // console.log(
-        //     "before compound borrow, borrowingCToken amount of this:%s",
-        //     _ERC20BalanceOf(param._cEtherAddress, address(this))
-        // );
-        // console.log(
-        //     "before compound borrow, borrowingToken amount of this:%s",
-        //     _ERC20BalanceOf(cTokenBorrow.underlying(), address(this))
-        // );
+        console.log(
+            "before compound borrow, borrowingCToken amount of this:%s",
+            _ERC20BalanceOf(param._cEtherAddress, address(this))
+        );
+        console.log(
+            "before compound borrow, borrowingToken amount of this:%s",
+            _ERC20BalanceOf(cTokenBorrow.underlying(), address(this))
+        );
 
         // Borrow, then check the underlying balance for this contract's address
-        console.log("before borrow ");
+
         error = cTokenBorrow.borrow(numWeiToBorrow);
         console.log("borrow error:$s", error);
 
-        // console.log(
-        //     "after compound borrow, borrowingCToken amount of this:%s ",
-        //     _ERC20BalanceOf(param._cEtherAddress, address(this))
-        // );
-        // console.log(
-        //     "after compound borrow, borrowingToken amount of this:%s",
-        //     _ERC20BalanceOf(cTokenBorrow.underlying(), address(this))
-        // );
-        // console.log(
-        //     "is eq to borrowingCToken.borrowBalanceCurrent(address(this))?: %s ",
-        //     cTokenBorrow.borrowBalanceCurrent(address(this))
-        // );
+        console.log(
+            "after compound borrow, borrowingCToken amount of this:%s ",
+            _ERC20BalanceOf(param._cEtherAddress, address(this))
+        );
+        console.log(
+            "after compound borrow, borrowingToken amount of this:%s",
+            _ERC20BalanceOf(cTokenBorrow.underlying(), address(this))
+        );
+        console.log(
+            "is eq to borrowingCToken.borrowBalanceCurrent(address(this))?: %s ",
+            cTokenBorrow.borrowBalanceCurrent(address(this))
+        );
 
         uint256 borrows = cTokenBorrow.borrowBalanceCurrent(address(this));
         emit MyLog("Current ETH borrow amount", borrows);
@@ -422,5 +408,58 @@ contract MyTest {
 
     function _ERC20BalanceOf(address token, address user) internal view returns (uint256) {
         return Erc20(token).balanceOf(user);
+    }
+
+    function _borrow(
+        address comptrollerAddress,
+        address collateralCTokenAddress,
+        address borrowingCTokenAddress,
+        uint256 collateralAmountOfCallateralToken,
+        uint256 borrowAmountOfBorrowingToken
+    ) public returns (uint256 borrowBalanceCurrent) {
+        Comptroller comptroller = Comptroller(comptrollerAddress);
+        CErc20 collateralCToken = CErc20(collateralCTokenAddress);
+        CErc20 borrowingCToken = CErc20(borrowingCTokenAddress);
+
+        // Approve transfer of underlying
+        _safeApprove(
+            collateralCToken.underlying(),
+            collateralCTokenAddress,
+            collateralAmountOfCallateralToken
+        );
+
+        uint256 error;
+
+        // Supply underlying as collateral, get cToken in return
+        error = collateralCToken.mint(collateralAmountOfCallateralToken);
+        if (error != 0) {
+            revert("CollateralLever__CErc20MintFailed(error)");
+        }
+
+        // (error2, liquidity, shortfall) = comptroller.getAccountLiquidity(address(this));
+
+        address[] memory cTokens = new address[](1);
+        cTokens[0] = collateralCTokenAddress;
+        uint256[] memory errors = comptroller.enterMarkets(cTokens);
+        if (errors[0] != 0) {
+            revert("Comptroller.enterMarkets failed.");
+        }
+
+        error = borrowingCToken.borrow(borrowAmountOfBorrowingToken);
+        if (error != 0) {
+            revert("CollateralLever__cErc20BorrowFailed(error)");
+        }
+
+        return borrowingCToken.borrowBalanceCurrent(address(this)); //利息原因, 此值可能大于_ERC20BalanceOf(borrowingCToken.underlying(), address(this))
+    }
+
+    function _safeApprove(
+        address token,
+        address to,
+        uint256 value
+    ) internal {
+        if (!Erc20(token).approve(to, value)) {
+            revert("_safeApprove failed");
+        }
     }
 }

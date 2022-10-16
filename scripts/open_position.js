@@ -6,12 +6,14 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 
 async function openPosition() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
-    let cXXXAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
+    let cXXXAddress = process.env.GOERLI_COMPOUND_CUSDC_ADDRESS
+    let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS        
     let cCOMPAddress = "0x0fF50a12759b081Bb657ADaCf712C52bb015F1Cd"
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        cXXXAddress = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
+        cXXXAddress = process.env.MAINNET_COMPOUND_CUSDC_ADDRESS
+        comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
         cCOMPAddress = "0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4" //mainnet cCOMP
     }
 
@@ -41,9 +43,9 @@ async function openPosition() {
 
     const collateralLeverOnUser = await collateralLeverOnDeployer.connect(user)
 
-    console.log(`44441`)
-    if (developmentChains.includes(network.name)) {
-        console.log(`eeeee:${network.name}`)
+    const isLocal = developmentChains.includes(network.name)
+    if (isLocal) {
+        console.log(`is local:${network.name}`)
         const investmentAmount2 = (100 * Math.pow(10, 18)).toString();
         //transfer DAI to user
         const DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
@@ -52,26 +54,64 @@ async function openPosition() {
         const impersonatedSigner = await ethers.getSigner(addressWithDAI)
         // const DAIAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F"            
         const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
-        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2)
+        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2)        
+    }
+    else{
+        comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
 
-    console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
+    console.log(`44441`)
 
-    const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress)
-    const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress)
-    console.log(`addSupportedCToken`)
+    const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress, { gasLimit: 3000000 })
+    const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000 })
+    console.log(`444422`)
 
-    const txAddReceipt = await txAdd.wait(1)
-    const txAdd2Receipt = await txAdd2.wait(1)
-    console.log(`added ctokenAddress: ${txAddReceipt.events[0].args.cTokenAddress}`)
+    // const txAddReceipt = await txAdd.wait(1)
+    // const txAdd2Receipt = await txAdd2.wait(1)
+    console.log(`44445`)
 
-    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
+    // console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
+    // console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
+
+    // const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
+
+    //----------------------------------------------mytest
+
+    const mantissa = investmentAmount;
+
+    const DAIWithUser = await ERC20TokenWithSigner(DAIAddress, user)
+
+    const myTestContractByDeployer = await ethers.getContract("MyTest", deployer)
+
+    const myTestContractByUser = await myTestContractByDeployer.connect(user)
+
+    await DAIWithUser.transfer(myTestContractByUser.address, mantissa, { gasLimit: 3000000 })
+
+
+    console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, myTestContractByUser.address)}`)
+    console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, myTestContractByUser.address)}`)
+    console.log(`comptrollerAddress: ${comptrollerAddress}`)
+    const param = {
+        _cEtherAddress: cXXXAddress, //borrow
+        _comptrollerAddress: comptrollerAddress,
+        _cTokenAddress: cDAIAddress, //collateral
+        _underlyingAddress: DAIAddress,
+        _underlyingToSupplyAsCollateral: mantissa
+    }
+    // const tx = await myTestContractByUser.erc20BorrowErc20Example(param,{gasLimit:3000000})
+    const tx = await myTestContractByUser._borrow(comptrollerAddress, cDAIAddress, cXXXAddress, mantissa, 11, { gasLimit: 3000000 })
+
+    //----------------------------------------------mytest over
+
+
+
 
     console.log(`5555`)
 
     const txReceipt = await tx.wait(1)
-    console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
+    console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, myTestContractByUser.address)}`)
+    console.log(`after:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, myTestContractByUser.address)}`)
 
     const userPostionNum = await collateralLeverOnDeployer.getPositionNumber(user.address)
     console.log(`user postion num:${userPostionNum}`)
