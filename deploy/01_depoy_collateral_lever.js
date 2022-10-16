@@ -20,7 +20,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         cTokens = [process.env.MAINNET_COMPOUND_CDAI_ADDRESS, process.env.MAINNET_COMPOUND_CUNI_ADDRESS, process.env.MAINNET_COMPOUND_CUSDC_ADDRESS]
     } else {
         //goerli        
-        arguments = [process.env.GOERLI_UNISWAP_V2_ROUTER02_ADDRESS, process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS, process.env.GOERLI_COMPTROLLER_ADDRESS]
+        arguments = [process.env.GOERLI_UNISWAP_V2_ROUTER02_ADDRESS, process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS, process.env.GOERLI_UNITROLLER_ADDRESS]
         cTokens = [process.env.GOERLI_COMPOUND_CDAI_ADDRESS, process.env.GOERLI_COMPOUND_CUNI_ADDRESS, process.env.GOERLI_COMPOUND_CUSDC_ADDRESS]
     }
 

@@ -54,7 +54,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     address private immutable i_uniswapV2RouterAddress;
     address private immutable i_uniswapV2FactoryAddress;
 
-    address private immutable i_comptrollerAddress;
+    address private immutable i_unitrollerAddress;
     address[] private s_flashSwapPath;
     mapping(address => address) public s_token2CToken; //underlying token address to ctoken address
     mapping(address => PositionInfo[]) public s_userAddress2PositionInfos;
@@ -71,11 +71,11 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     constructor(
         address uniswapV2Router,
         address uniswapV2Factory,
-        address comptroller
+        address unitroller
     ) {
         i_uniswapV2RouterAddress = uniswapV2Router;
         i_uniswapV2FactoryAddress = uniswapV2Factory;
-        i_comptrollerAddress = comptroller;
+        i_unitrollerAddress = unitroller;
     }
 
     receive() external payable {
@@ -431,7 +431,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 collateralAmountOfCallateralToken,
         uint256 borrowAmountOfBorrowingToken
     ) internal returns (uint256 borrowBalanceCurrent) {
-        IComptroller comptroller = IComptroller(i_comptrollerAddress);
+        IComptroller comptroller = IComptroller(i_unitrollerAddress);
         ICErc20 collateralCToken = ICErc20(collateralCTokenAddress);
         ICErc20 borrowingCToken = ICErc20(borrowingCTokenAddress);
 
@@ -547,7 +547,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     }
 
     function getComptrollerAddress() external view returns (address) {
-        return i_comptrollerAddress;
+        return i_unitrollerAddress;
     }
     function getPositionNumber(address user) external view returns (uint256) {
         return s_userAddress2PositionInfos[user].length;

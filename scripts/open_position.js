@@ -7,14 +7,14 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 async function openPosition() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
     let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
-    let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS        
-    let cCOMPAddress = "0x0fF50a12759b081Bb657ADaCf712C52bb015F1Cd"
+    let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS
+
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
         cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
         comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
-        cCOMPAddress = "0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4" //mainnet cCOMP
+
     }
 
     const DAIAddress = await getUnderlyingByCTokenAddress(cDAIAddress)
@@ -54,9 +54,9 @@ async function openPosition() {
         const impersonatedSigner = await ethers.getSigner(addressWithDAI)
         // const DAIAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F"            
         const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
-        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2)        
+        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2)
     }
-    else{
+    else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
 
@@ -71,38 +71,38 @@ async function openPosition() {
     // const txAdd2Receipt = await txAdd2.wait(1)
     console.log(`44445`)
 
-    // console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
-    // console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
+    console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
+    console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
 
-    // const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
+    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
 
-    //----------------------------------------------mytest
+    // //----------------------------------------------mytest
 
-    const mantissa = investmentAmount;
+    // const mantissa = investmentAmount;
 
-    const DAIWithUser = await ERC20TokenWithSigner(DAIAddress, user)
+    // const DAIWithUser = await ERC20TokenWithSigner(DAIAddress, user)
 
-    const myTestContractByDeployer = await ethers.getContract("MyTest", deployer)
+    // const myTestContractByDeployer = await ethers.getContract("MyTest", deployer)
 
-    const myTestContractByUser = await myTestContractByDeployer.connect(user)
+    // const myTestContractByUser = await myTestContractByDeployer.connect(user)
 
-    await DAIWithUser.transfer(myTestContractByUser.address, mantissa, { gasLimit: 3000000 })
+    // await DAIWithUser.transfer(myTestContractByUser.address, mantissa, { gasLimit: 3000000 })
 
 
-    console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, myTestContractByUser.address)}`)
-    console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, myTestContractByUser.address)}`)
-    console.log(`comptrollerAddress: ${comptrollerAddress}`)
-    const param = {
-        _cEtherAddress: cXXXAddress, //borrow
-        _comptrollerAddress: comptrollerAddress,
-        _cTokenAddress: cDAIAddress, //collateral
-        _underlyingAddress: DAIAddress,
-        _underlyingToSupplyAsCollateral: mantissa
-    }
-    // const tx = await myTestContractByUser.erc20BorrowErc20Example(param,{gasLimit:3000000})
-    const tx = await myTestContractByUser._borrow(comptrollerAddress, cDAIAddress, cXXXAddress, mantissa, 11, { gasLimit: 3000000 })
+    // console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, myTestContractByUser.address)}`)
+    // console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, myTestContractByUser.address)}`)
+    // console.log(`comptrollerAddress: ${comptrollerAddress}`)
+    // const param = {
+    //     _cEtherAddress: cXXXAddress, //borrow
+    //     _comptrollerAddress: comptrollerAddress,
+    //     _cTokenAddress: cDAIAddress, //collateral
+    //     _underlyingAddress: DAIAddress,
+    //     _underlyingToSupplyAsCollateral: mantissa
+    // }
+    // // const tx = await myTestContractByUser.erc20BorrowErc20Example(param,{gasLimit:3000000})
+    // const tx = await myTestContractByUser._borrow(comptrollerAddress, cDAIAddress, cXXXAddress, mantissa, 11, { gasLimit: 3000000 })
 
-    //----------------------------------------------mytest over
+    // //----------------------------------------------mytest over
 
 
 
@@ -110,8 +110,8 @@ async function openPosition() {
     console.log(`5555`)
 
     const txReceipt = await tx.wait(1)
-    console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, myTestContractByUser.address)}`)
-    console.log(`after:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, myTestContractByUser.address)}`)
+    console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
+    console.log(`after:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
 
     const userPostionNum = await collateralLeverOnDeployer.getPositionNumber(user.address)
     console.log(`user postion num:${userPostionNum}`)
