@@ -25,6 +25,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     console.log("begin deploy CollateralLever")
+
     const collateralLever = await deploy("CollateralLever",
         {
             from: deployer,
@@ -33,24 +34,18 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             waitConfirmations: waitBlockConfirmations,
             gasLimit: 4229450,
         }
-    )
+    )    
+    
     console.log(`fermi deploy CollateralLever address: ${collateralLever.address}`)
 
     if (!isLocal && process.env.ETHERSCAN_API_KEY) {
-        await verify(collateralLever.address, arguments)
+        // await verify(collateralLever.address, arguments)
     }
-    //add cTokens
-    collateralContract = await ethers.getContract("CollateralLever", deployer)
     console.log(`blocknum:${await ethers.provider.getBlockNumber()}`)
-    // await collateralContract.addSupportedCToken(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
-    // await collateralContract.addSupportedCToken(process.env.MAINNET_COMPOUND_CUNI_ADDRESS)
-    // await collateralContract.addSupportedCToken(process.env.MAINNET_COMPOUND_CUNI_ADDRESS)
-    // await collateralContract.addSupportedCToken(process.env.MAINNET_COMPOUND_CUNI_ADDRESS)
-    // await collateralContract.addSupportedCToken(process.env.MAINNET_COMPOUND_CUSDC_ADDRES)
-
+    //add cTokens
     console.log(`addSupportedCToken 3 cTokens for init`)
     cTokens.forEach(async element => {
-        await collateralContract.addSupportedCToken(element)
+        const tx = await collateralContract.addSupportedCToken(element)
     });
 
 

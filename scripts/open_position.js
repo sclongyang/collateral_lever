@@ -15,8 +15,8 @@ async function openPosition() {
         cCOMPAddress = "0x70e36f6BF80a52b3B46b3aF8e106CC0ed743E8e4" //mainnet cCOMP
     }
 
-    const DAIAddress = getUnderlyingByCTokenAddress(cDAIAddress)
-    const XXXAddress = getUnderlyingByCTokenAddress(cXXXAddress)
+    const DAIAddress = await getUnderlyingByCTokenAddress(cDAIAddress)
+    const XXXAddress = await getUnderlyingByCTokenAddress(cXXXAddress)
 
     const signers = await ethers.getSigners()
     const deployer = signers[0]
@@ -26,7 +26,7 @@ async function openPosition() {
     const tokenBase = DAIAddress
     const tokenQuote = XXXAddress
     const underlyingDecimalsOfDAI = 18
-    const underlyingAsCollateral = 0.01 //DAI         
+    const underlyingAsCollateral = 0.031 //DAI         
     const investmentAmount = (underlyingAsCollateral * Math.pow(10, underlyingDecimalsOfDAI)).toString();
     const investmentIsQuote = false
     const lever = 2
@@ -44,7 +44,7 @@ async function openPosition() {
     console.log(`44441`)
     if (developmentChains.includes(network.name)) {
         console.log(`eeeee:${network.name}`)
-        const investmentAmount = (100 * Math.pow(10, 18)).toString();
+        const investmentAmount2 = (100 * Math.pow(10, 18)).toString();
         //transfer DAI to user
         const DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
         const addressWithDAI = "0x604981db0C06Ea1b37495265EDa4619c8Eb95A3D"
@@ -52,13 +52,26 @@ async function openPosition() {
         const impersonatedSigner = await ethers.getSigner(addressWithDAI)
         // const DAIAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F"            
         const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
-        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount)
+        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2)
     }
 
     console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-    // const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })   
-    const tx = await collateralLeverOnUser.testTransferFromAll(DAIAddress, user.address, collateralLeverOnUser.address, investmentAmount, { gasLimit: 9100000 })
+    console.log(`tokenbase:${tokenBase}, tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},lever:${lever},isShort:${isShort} `)
+    console.log(`before s_token2CToken[tokenBase]:${await collateralLeverOnUser.s_token2CToken(tokenBase)}`)
+    console.log(`before s_token2CToken[tokenQuote]:${await collateralLeverOnUser.s_token2CToken(tokenQuote)}`)
+
+    const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress)
+    const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress)
+    console.log(`qqq`)
+    const txAddReceipt = await txAdd.wait(1)
+    const txAdd2Receipt = await txAdd2.wait(1)
+
+    console.log(`after s_token2CToken[tokenBase]:${await collateralLeverOnUser.s_token2CToken(tokenBase)}`)
+    console.log(`after s_token2CToken[tokenQuote]:${await collateralLeverOnUser.s_token2CToken(tokenQuote)}`)
+
+    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
+    // const tx = await collateralLeverOnUser.testTransferFromAll(DAIAddress, user.address, collateralLeverOnUser.address, investmentAmount, { gasLimit: 9100000 })
 
     console.log(`5555`)
     // const tx = await collateralLeverOnUser.testTransferFrom2Params(DAIAddress, investmentAmount, { gasLimit: 9200000 })
@@ -67,7 +80,7 @@ async function openPosition() {
     const txReceipt = await tx.wait(1)
     console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, contract balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
 
-    console.log(`6666`)   
+    console.log(`6666`)
 
 
     // console.log(`collateralLever addr: ${collateralLeverOnUser.address}, positionId: ${txReceipt.events[0].args.positionInfo.positionId},positionInfo: ${txReceipt.events[0].args.positionInfo}`)
