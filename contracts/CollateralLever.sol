@@ -2,14 +2,15 @@
 pragma solidity ^0.8.0;
 
 // import "hardhat/console.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Callee.sol";
 import "./libraries/UniswapV2Library.sol";
+import "./libraries/UQ112x112.sol";
 import "./interfaces/IUniswapV2Router.sol";
 import "./interfaces/ICErc20.sol";
+import "./interfaces/IERC20.sol";
 import "./interfaces/ICEth.sol";
 import "./interfaces/IComptroller.sol";
 // import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
@@ -34,11 +35,15 @@ error CollateralLever__cErc20RepayBorrowFailed(uint256 error);
 // error CollateralLever__borrowedAmountLessThanRepayAmount();
 
 contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
+    using UQ112x112 for uint224;
+
     struct PositionInfo {
         address cTokenCollateralAddress;
         address cTokenBorrowingAddress;
-        uint256 collateralAmountOfCollateralToken; //抵押数量
-        uint256 borrowedAmountOfBorrowingToken; //贷出数量
+        uint256 collateralAmountOfCollateralToken;
+        uint256 collateralAmountOfCollateralCToken;
+        uint256 borrowedAmountOfBorrowingToken;
+        uint256 borrowBalanceCurrentOfBorrowingToken;
         bool isShort; //是否做空
         uint256 positionId;
     }
@@ -56,13 +61,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
     address private immutable i_unitrollerAddress;
     address[] private s_flashSwapPath;
+    uint256 private s_lastPositionId;
     mapping(address => address) public s_token2CToken; //underlying token address to ctoken address
-    mapping(address => PositionInfo[]) public s_userAddress2PositionInfos;
+    mapping(address => mapping(uint256 => PositionInfo)) public s_userAddress2PositionInfos;
 
     //是否持有仓位
     modifier OwnerOfPosition(address user, uint256 positionId) {
-        (uint256 idx, ) = _findPosition(user, positionId);
-        if (idx == UINT256_MAX) {
+        PositionInfo memory positionInfo = s_userAddress2PositionInfos[user][positionId];
+        if (positionInfo.positionId == 0) {
             revert CollateralLever__notOwnerOfPosition();
         }
         _;
@@ -78,14 +84,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         i_unitrollerAddress = unitroller;
     }
 
-    receive() external payable {
-        //todo 第一版仅支持ERC20
-    }
+    // receive() external payable {
+    //     //todo 第一版仅支持ERC20
+    // }
 
     function addSupportedCToken(address cTokenAddress) external onlyOwner {
         s_token2CToken[ICErc20(cTokenAddress).underlying()] = cTokenAddress;
         emit AddSupportedCToken(cTokenAddress);
-    }    
+    }
 
     function openPosition(
         address tokenBase,
@@ -95,7 +101,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 lever,
         bool isShort
     ) external {
-
         if (tokenBase == tokenQuote) {
             revert CollateralLever__tokenBaseEqTokenQuote();
         }
@@ -109,10 +114,9 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         _checkTokenSupported(tokenBase);
         _checkTokenSupported(tokenQuote);
 
-
         //资金转移到本合约
         address investmentToken = investmentIsQuote ? tokenQuote : tokenBase;
-        // _safeApprove(investmentToken, address(this), investmentAmount);        
+        // _safeApprove(investmentToken, address(this), investmentAmount);
 
         _safeTransferFrom(investmentToken, msg.sender, address(this), investmentAmount);
 
@@ -179,18 +183,19 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     function closePosition(
         uint256 positionId // uint256 repayAmountOfBorrowingToken //平仓数量    第一版暂不使用该参数, 只实现全量平仓
     ) external OwnerOfPosition(msg.sender, positionId) {
-        (, PositionInfo memory positionInfo) = _findPosition(msg.sender, positionId);
-
-        // uint256 flashSwapAmountOfBorrowingToken = repayAmountOfBorrowingToken >
-        //     positionInfo.borrowedAmountOfBorrowingToken
-        //     ? positionInfo.borrowedAmountOfBorrowingToken
-        //     : repayAmountOfBorrowingToken;
+        PositionInfo memory positionInfo = s_userAddress2PositionInfos[msg.sender][positionId];
 
         //是否平仓全量
         bool isCloseAllAmount = true; //第一版只实现 全量平仓
         ICErc20 borrowingCToken = ICErc20(positionInfo.cTokenBorrowingAddress);
-        uint256 flashSwapAmountOfBorrowingToken = borrowingCToken.borrowBalanceCurrent(
-            address(this)
+
+        //todo:待研究如何计算每个仓位的borrowingCToken利息, 第一版暂用简单粗暴的算法:按比例
+        uint112 temp = uint112(positionInfo.borrowedAmountOfBorrowingToken) *
+            uint112(borrowingCToken.borrowBalanceCurrent(address(this)));
+        uint256 flashSwapAmountOfBorrowingToken = uint256(
+            UQ112x112.encode(temp).uqdiv(
+                uint112(positionInfo.borrowBalanceCurrentOfBorrowingToken)
+            )
         );
 
         address collateralTokenAddress = ICErc20(positionInfo.cTokenCollateralAddress)
@@ -206,7 +211,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         bytes memory data = abi.encode(
             positionInfo.cTokenCollateralAddress,
             positionInfo.cTokenBorrowingAddress,
-            positionInfo.collateralAmountOfCollateralToken,
+            positionInfo.collateralAmountOfCollateralCToken,
             msg.sender,
             isCloseAllAmount,
             false, //开仓:true, 平仓: false
@@ -240,7 +245,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         (
             address collateralTokenOrCToken, //开仓对应于token, 平仓对应于cToken
             address borrowingTokenOrCToken, //开仓对应于token, 平仓对应于cToken
-            uint256 originalOrTotalCollateralAmount, //开仓对应于origin, 平仓对应于total
+            uint256 collateralAmount, //开仓对应于original collateralAmountOfCollateralToken, 平仓对应于total collateralAmountOfCollateralCToken
             address user,
             bool flag,
             bool isOpenPosition, //开仓or平仓
@@ -278,7 +283,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
                 token0 == borrowingTokenAddress ? amount1 : amount0, //flashSwapAmount对应的token是collateralToken
                 collateralTokenOrCToken,
                 borrowingTokenOrCToken,
-                originalOrTotalCollateralAmount,
+                collateralAmount,
                 user,
                 flag //代表 isShort
             )
@@ -286,7 +291,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
                 token0 == borrowingTokenAddress ? amount0 : amount1, //flashSwapAmount对应的token是borrowingToken
                 collateralTokenOrCToken,
                 borrowingTokenOrCToken,
-                originalOrTotalCollateralAmount,
+                collateralAmount,
                 user,
                 flag, //代表 isCloseAllAmount 是否平仓全量
                 positionId
@@ -297,7 +302,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 flashSwapAmountOfBorrowingToken,
         address collateralCTokenAddress,
         address borrowingCTokenAddress,
-        uint256 totalCollateralAmountOfCollateralToken,
+        uint256 totalCollateralAmountOfCollateralCToken,
         address user,
         bool isCloseAllAmount,
         uint256 positionId
@@ -325,17 +330,12 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 repayAmountOfCollateralTokenForFlash = IUniswapV2Router(i_uniswapV2RouterAddress)
             .getAmountsIn(flashSwapAmountOfBorrowingToken, s_flashSwapPath)[0];
 
-        uint256 transferAmountToUser;
         // 赎回:cToken=>token
         if (isCloseAllAmount) {
-            error = collateralCToken.redeemUnderlying(totalCollateralAmountOfCollateralToken);
+            error = collateralCToken.redeem(totalCollateralAmountOfCollateralCToken);
             if (error != 0) {
                 revert CollateralLever__cErc20RedeemUnderlyingFailed(error);
             }
-
-            transferAmountToUser =
-                totalCollateralAmountOfCollateralToken -
-                repayAmountOfCollateralTokenForFlash;
         } else {
             //todo: 第一版不会到这里, 后续版本考虑此情况
             require(false, "cannot be here");
@@ -351,17 +351,18 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         _safeTransfer(s_flashSwapPath[0], pair, repayAmountOfCollateralTokenForFlash);
 
         //transfer to user
+        uint256 transferAmountToUser = _ERC20BalanceOf(collateralTokenAddress, address(this));
         if (transferAmountToUser > 0) {
             _safeTransfer(collateralTokenAddress, user, transferAmountToUser);
         }
 
         //第一版直接删除仓位信息
-        (uint256 idx, ) = _findPosition(user, positionId);
-        if (idx != UINT256_MAX) {
-            delete s_userAddress2PositionInfos[user][idx]; //会产生gap, 可考虑优化
-            emit ClosePositionSucc(user, positionId);
-        } else {
+        PositionInfo memory positionInfo = s_userAddress2PositionInfos[user][positionId];
+        if (positionInfo.positionId == 0) {
             revert CollateralLever__notFindPosition(user, positionId);
+        } else {
+            delete s_userAddress2PositionInfos[user][positionId]; //会产生gap, 可考虑优化
+            emit ClosePositionSucc(user, positionId);
         }
     }
 
@@ -405,32 +406,40 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         );
         _safeTransfer(s_flashSwapPath[0], pair, borrowAmountOfBorrowingToken);
 
-        //保存仓位信息
-        PositionInfo[] memory positions = s_userAddress2PositionInfos[user]; //saving gas
-        uint256 positionId = positions.length > 0
-            ? positions[positions.length - 1].positionId + 1
-            : 1;
+        uint256 collateralAmountOfCollateralCToken = _tokenAmount2CTokenAmount(
+            cTokenCollateral,
+            collateralToken,
+            totalCollateralAmount
+        );
 
+        ICErc20 borrowingCToken = ICErc20(cTokenBorrowing);
+        uint256 borrowBalanceCurrentOfBorrowingToken = borrowingCToken.borrowBalanceCurrent(
+            address(this)
+        );
+        //保存仓位信息
+        uint256 positionId = ++s_lastPositionId;
         PositionInfo memory newPosition = PositionInfo(
             cTokenCollateral,
             cTokenBorrowing,
             totalCollateralAmount,
+            collateralAmountOfCollateralCToken,
             borrowAmountOfBorrowingToken,
+            borrowBalanceCurrentOfBorrowingToken,
             isShort,
             positionId
         );
-        s_userAddress2PositionInfos[user].push(newPosition);
+        s_userAddress2PositionInfos[user][positionId] = newPosition;
 
         emit OpenPositionSucc(user, newPosition);
     }
 
-    // // 参考 https://github.com/compound-developers/compound-borrow-examples/blob/master/contracts/MyContracts.sol
+    // 参考 https://github.com/compound-developers/compound-borrow-examples/blob/master/contracts/MyContracts.sol
     function _borrow(
         address collateralCTokenAddress,
         address borrowingCTokenAddress,
         uint256 collateralAmountOfCallateralToken,
         uint256 borrowAmountOfBorrowingToken
-    ) internal returns (uint256 borrowBalanceCurrent) {
+    ) internal {
         IComptroller comptroller = IComptroller(i_unitrollerAddress);
         ICErc20 collateralCToken = ICErc20(collateralCTokenAddress);
         ICErc20 borrowingCToken = ICErc20(borrowingCTokenAddress);
@@ -463,8 +472,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (error != 0) {
             revert CollateralLever__cErc20BorrowFailed(error);
         }
-
-        return borrowingCToken.borrowBalanceCurrent(address(this)); //利息原因, 此值可能大于_ERC20BalanceOf(borrowingCToken.underlying(), address(this))
     }
 
     function _swapToCollateral(
@@ -504,7 +511,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address from,
         address to,
         uint256 value
-    ) internal {        
+    ) internal {
         if (!IERC20(token).transferFrom(from, to, value)) {
             revert CollateralLever__transferFromFailed();
         }
@@ -514,27 +521,25 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         return IERC20(token).balanceOf(user);
     }
 
-    function _findPosition(address user, uint256 positionId)
-        internal
-        view
-        returns (uint256 idx, PositionInfo memory positionInfo)
-    {
-        PositionInfo[] memory positions = s_userAddress2PositionInfos[user]; //saving gas
-        uint256 len = positions.length;
-        idx = UINT256_MAX;
-        for (uint256 i = 0; i < len; ++i) {
-            if (positions[i].positionId == positionId) {
-                positionInfo = positions[i];
-                idx = i;
-                break;
-            }
-        }
-    }
-
     function _checkTokenSupported(address tokenAddress) internal view {
         if (s_token2CToken[tokenAddress] == address(0)) {
             revert CollateralLever__tokenNotSupport(tokenAddress);
         }
+    }
+
+    function _tokenAmount2CTokenAmount(
+        address cTokenAddress,
+        address tokenAddress,
+        uint256 tokenAmount
+    ) internal returns (uint256) {
+        ICErc20 ctoken = ICErc20(cTokenAddress);
+        IERC20 token = IERC20(tokenAddress);
+        //计算一个ctoken可兑换多少token amount ; 参考:https://docs.compound.finance/v2/#guides
+        uint256 cTokenDecimals = 8; // all cTokens have 8 decimal places
+        uint256 exchangeRateCurrent = ctoken.exchangeRateCurrent();
+        uint256 mantissa = 18 + token.decimals() - cTokenDecimals;
+        uint112 temp = uint112(tokenAmount) * uint112(10**mantissa);
+        return uint256(UQ112x112.encode(temp).uqdiv(uint112(exchangeRateCurrent)));
     }
 
     // getter function--------------------------------------
@@ -549,7 +554,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     function getComptrollerAddress() external view returns (address) {
         return i_unitrollerAddress;
     }
-    function getPositionNumber(address user) external view returns (uint256) {
-        return s_userAddress2PositionInfos[user].length;
+
+    function getNextPostionId() external view returns (uint256) {
+        return s_lastPositionId;
     }
 }
