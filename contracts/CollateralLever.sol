@@ -218,10 +218,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "uint112 positionInfo.borrowBalanceCurrentOfBorrowingToken %s",
             uint112(positionInfo.borrowBalanceCurrentOfBorrowingToken)
         );
-        console.log(
-            "11 flashSwapAmountOfBorrowingToken %s",
-            flashSwapAmountOfBorrowingToken 
-        );
+        console.log("11 flashSwapAmountOfBorrowingToken %s", flashSwapAmountOfBorrowingToken);
 
         address collateralTokenAddress = ICErc20(positionInfo.cTokenCollateralAddress)
             .underlying();
@@ -366,8 +363,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "totalCollateralAmountOfCollateralCToken %s",
             totalCollateralAmountOfCollateralCToken
         );
-        console.log("before redeem, this balanceof collateralCTOKEN:%s",_ERC20BalanceOf(collateralCTokenAddress, address(this)));
-        console.log("before redeem, this balanceof collateraltoken:%s",_ERC20BalanceOf(collateralTokenAddress, address(this)));
+        console.log(
+            "before redeem, this balanceof collateralCTOKEN:%s",
+            _ERC20BalanceOf(collateralCTokenAddress, address(this))
+        );
+        console.log(
+            "before redeem, this balanceof collateraltoken:%s",
+            _ERC20BalanceOf(collateralTokenAddress, address(this))
+        );
 
         // 赎回:cToken=>token
         if (isCloseAllAmount) {
@@ -380,8 +383,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             require(false, "cannot be here");
         }
 
-        console.log("after redeem, this balanceof collateralCTOKEN:%s",_ERC20BalanceOf(collateralCTokenAddress, address(this)));
-        console.log("after redeem, this balanceof collateraltoken:%s",_ERC20BalanceOf(collateralTokenAddress, address(this)));
+        console.log(
+            "after redeem, this balanceof collateralCTOKEN:%s",
+            _ERC20BalanceOf(collateralCTokenAddress, address(this))
+        );
+        console.log(
+            "after redeem, this balanceof collateraltoken:%s",
+            _ERC20BalanceOf(collateralTokenAddress, address(this))
+        );
 
         //还闪电贷
         address pair = UniswapV2Library.pairFor(
@@ -433,7 +442,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 totalCollateralAmount = flashSwapAmountOfCallateralToken +
             originalCollateralAmountOfCollateralToken;
 
-        _borrow(
+        uint256 collateralAmountOfCollateralCToken =  _borrow(
             cTokenCollateral,
             cTokenBorrowing,
             totalCollateralAmount,
@@ -448,19 +457,10 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         );
         _safeTransfer(s_flashSwapPath[0], pair, borrowAmountOfBorrowingToken);
 
-        console.log("999");
-        uint256 collateralAmountOfCollateralCToken = _tokenAmount2CTokenAmount(
-            cTokenCollateral,
-            collateralToken,
-            totalCollateralAmount
-        );
-        console.log("zzz");
-
         ICErc20 borrowingCToken = ICErc20(cTokenBorrowing);
         uint256 borrowBalanceCurrentOfBorrowingToken = borrowingCToken.borrowBalanceCurrent(
             address(this)
         );
-        console.log("xxx");
 
         //保存仓位信息
         uint256 positionId = ++s_lastPositionId;
@@ -469,7 +469,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             cTokenBorrowing,
             totalCollateralAmount,
             collateralAmountOfCollateralCToken,
-            borrowAmountOfBorrowingToken,
+            borrowAmountOfBorrowingToken,            
             borrowBalanceCurrentOfBorrowingToken,
             isShort,
             positionId
@@ -485,7 +485,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address borrowingCTokenAddress,
         uint256 collateralAmountOfCallateralToken,
         uint256 borrowAmountOfBorrowingToken
-    ) internal {
+    ) internal returns (uint256 collateralAmountOfCollateralCToken) {
         IComptroller comptroller = IComptroller(i_unitrollerAddress);
         ICErc20 collateralCToken = ICErc20(collateralCTokenAddress);
         ICErc20 borrowingCToken = ICErc20(borrowingCTokenAddress);
@@ -501,29 +501,25 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         console.log("borrowAmountOfBorrowingToken:%s", borrowAmountOfBorrowingToken);
 
         uint256 error;
-
+        uint256 oldAmount = collateralCToken.balanceOf(address(this));
         // Supply underlying as collateral, get cToken in return
         error = collateralCToken.mint(collateralAmountOfCallateralToken);
         if (error != 0) {
             revert CollateralLever__CErc20MintFailed(error);
         }
         console.log("666");
-
+        collateralAmountOfCollateralCToken = collateralCToken.balanceOf(address(this)) - oldAmount;
         // (error2, liquidity, shortfall) = comptroller.getAccountLiquidity(address(this));
-
         address[] memory cTokens = new address[](1);
         cTokens[0] = collateralCTokenAddress;
         uint256[] memory errors = comptroller.enterMarkets(cTokens);
         if (errors[0] != 0) {
             revert("Comptroller.enterMarkets failed.");
         }
-        console.log("777");
-
         error = borrowingCToken.borrow(borrowAmountOfBorrowingToken);
         if (error != 0) {
             revert CollateralLever__cErc20BorrowFailed(error);
         }
-        console.log("888");
     }
 
     function _swapToCollateral(
@@ -577,34 +573,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (s_token2CToken[tokenAddress] == address(0)) {
             revert CollateralLever__tokenNotSupport(tokenAddress);
         }
-    }
-
-    function _tokenAmount2CTokenAmount(
-        address cTokenAddress,
-        address tokenAddress,
-        uint256 tokenAmount
-    ) internal returns (uint256) {
-        ICErc20 ctoken = ICErc20(cTokenAddress);
-        IERC20 token = IERC20(tokenAddress);
-        //计算一个ctoken可兑换多少token amount ; 参考:https://docs.compound.finance/v2/#guides
-        uint256 cTokenDecimals = 8; // all cTokens have 8 decimal places
-        uint256 exchangeRateCurrent = ctoken.exchangeRateCurrent();
-        console.log("aaa");
-
-        uint256 mantissa = 18 + token.decimals() - cTokenDecimals;
-        console.log(
-            "bbb  18+%s+%s, tokenAmount * (10**mantissa):%s",
-            token.decimals(),
-            cTokenDecimals,
-            tokenAmount * (10**mantissa)
-        );
-
-        uint112 temp = uint112(tokenAmount * (10**mantissa));
-        console.log("ccc  temp:%s,exchangeRateCurrent:%s", temp, exchangeRateCurrent);
-        console.log("origaina:     %s", tokenAmount * (10**mantissa) / exchangeRateCurrent);
-        uint256 result = uint256(UQ112x112.encode(temp).uqdiv(uint112(exchangeRateCurrent))) / UQ112x112.Q112;
-        console.log("not origaina: %s", result);
-        return result;
     }
 
     // getter function--------------------------------------
