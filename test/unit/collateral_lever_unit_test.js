@@ -9,7 +9,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
         let collateralLeverOnDeployer, collateralLeverOnUser, deployer, user, DAIAddress
         let tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort
         const cTokenAddressOfTokenBase = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        const cTokenAddressOfTokenQuote = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
+        const cTokenAddressOfTokenQuote = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
 
         beforeEach(async () => {
             await deployments.fixture("all")

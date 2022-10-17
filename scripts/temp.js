@@ -15,8 +15,10 @@ async function exec() {
     console.log(`deployer addr: ${deployer.address}, user addr:${user.address}`)
 
     const collateralLeverOnUser = await collateralLeverOnDeployer.connect(user)
+    const ctoken = await ethers.getContractAt(ctokenAbi, process.env.GOERLI_COMPOUND_CUNI_ADDRESS)
+    console.log(`await ctoken.borrowRatePerBlock():${await ctoken.borrowRatePerBlock()}`)
 
-    const postionInfo2 = await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 2)
+    const postionInfo2 = await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)
     console.log(`position :${postionInfo2}`)      
 
     if (network.config.chainId == 31337) {

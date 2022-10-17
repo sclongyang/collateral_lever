@@ -209,9 +209,10 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         //todo:待研究如何计算每个仓位的borrowingCToken利息, 第一版暂用简单粗暴的算法:按比例, 第一版只实现 全量平仓
         //第一版:flashSwapAmountOfBorrowingToken = 利息+positionInfo.borrowedAmountOfBorrowingToken
         //其中: 利息/总利息(borrowBalanceCurrent- s_totalBorrowedTokenAmount[borrowingTokenAddress]) == positionInfo.borrowedAmountOfBorrowingToken/s_totalBorrowedTokenAmount[borrowingTokenAddress]
-        uint256 flashSwapAmountOfBorrowingToken = (positionInfo.borrowedAmountOfBorrowingToken *
-            borrowingCToken.borrowBalanceCurrent(address(this))) /
-            s_totalBorrowedTokenAmount[borrowingTokenAddress];
+        // uint256 flashSwapAmountOfBorrowingToken = (positionInfo.borrowedAmountOfBorrowingToken *
+        //     borrowingCToken.borrowBalanceCurrent(address(this))) /
+        //     s_totalBorrowedTokenAmount[borrowingTokenAddress];
+        uint256 flashSwapAmountOfBorrowingToken = positionInfo.borrowedAmountOfBorrowingToken;
         console.log("11 flashSwapAmountOfBorrowingToken %s", flashSwapAmountOfBorrowingToken);
 
         address pair = UniswapV2Library.pairFor(
@@ -340,9 +341,18 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "before borrowingToken amount of this:%s",
             _ERC20BalanceOf(borrowingTokenAddress, address(this))
         );
+        console.log(
+            "before repay callateralCToken amount of this:%s",
+            collateralCToken.balanceOf(address(this))
+        );
+        console.log(
+            "before repay callateralToken amount of this:%s",
+            _ERC20BalanceOf(collateralTokenAddress, address(this))
+        );
 
         // -1 表示全额还款，包括所有利息
         uint256 error = borrowingCToken.repayBorrow(flashSwapAmountOfBorrowingToken);
+
         if (error != 0) {
             revert CollateralLever__cErc20RepayBorrowFailed(error);
         }
@@ -355,6 +365,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "after borrowingToken amount of this:%s",
             _ERC20BalanceOf(borrowingTokenAddress, address(this))
         );
+        console.log(
+            "before repay callateralCToken amount of this:%s",
+            collateralCToken.balanceOf(address(this))
+        );
+        console.log(
+            "before repay callateralToken amount of this:%s",
+            _ERC20BalanceOf(collateralTokenAddress, address(this))
+        );
 
         //闪电贷还款金额
         uint256 repayAmountOfCollateralTokenForFlash = IUniswapV2Router(i_uniswapV2RouterAddress)
@@ -364,6 +382,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "22 repayAmountOfCollateralTokenForFlash %s",
             repayAmountOfCollateralTokenForFlash
         );
+
         console.log(
             "totalCollateralAmountOfCollateralCToken %s",
             totalCollateralAmountOfCollateralCToken
