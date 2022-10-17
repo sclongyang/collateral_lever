@@ -6,13 +6,13 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 
 async function exec() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
-    let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
+    let cXXXAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
     let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS
 
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
+        cXXXAddress = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
         comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
 
     }

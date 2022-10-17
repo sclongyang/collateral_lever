@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -101,6 +101,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 lever,
         bool isShort
     ) external {
+        console.log("111");
         if (tokenBase == tokenQuote) {
             revert CollateralLever__tokenBaseEqTokenQuote();
         }
@@ -113,12 +114,14 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         }
         _checkTokenSupported(tokenBase);
         _checkTokenSupported(tokenQuote);
+        console.log("222");
 
         //资金转移到本合约
         address investmentToken = investmentIsQuote ? tokenQuote : tokenBase;
         // _safeApprove(investmentToken, address(this), investmentAmount);
 
         _safeTransferFrom(investmentToken, msg.sender, address(this), investmentAmount);
+        console.log("333");
 
         address collateralToken;
         address borrowingToken;
@@ -176,8 +179,10 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         flashSwapPath[0] = borrowingToken;
         flashSwapPath[1] = collateralToken;
         s_flashSwapPath = flashSwapPath;
+        console.log("444");
 
         IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
+        console.log("555");
     }
 
     function closePosition(
@@ -192,10 +197,30 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         //todo:待研究如何计算每个仓位的borrowingCToken利息, 第一版暂用简单粗暴的算法:按比例
         uint112 temp = uint112(positionInfo.borrowedAmountOfBorrowingToken) *
             uint112(borrowingCToken.borrowBalanceCurrent(address(this)));
-        uint256 flashSwapAmountOfBorrowingToken = uint256(
-            UQ112x112.encode(temp).uqdiv(
-                uint112(positionInfo.borrowBalanceCurrentOfBorrowingToken)
-            )
+        uint256 flashSwapAmountOfBorrowingToken = (positionInfo.borrowedAmountOfBorrowingToken *
+            borrowingCToken.borrowBalanceCurrent(address(this))) /
+            positionInfo.borrowBalanceCurrentOfBorrowingToken;
+
+        console.log(
+            "positionInfo.borrowedAmountOfBorrowingToken %s",
+            positionInfo.borrowedAmountOfBorrowingToken
+        );
+        console.log(
+            "borrowingCToken.borrowBalanceCurrent(address(this)) %s",
+            borrowingCToken.borrowBalanceCurrent(address(this))
+        );
+        console.log("temp %s", temp);
+        console.log(
+            "positionInfo.borrowBalanceCurrentOfBorrowingToken %s",
+            positionInfo.borrowBalanceCurrentOfBorrowingToken
+        );
+        console.log(
+            "uint112 positionInfo.borrowBalanceCurrentOfBorrowingToken %s",
+            uint112(positionInfo.borrowBalanceCurrentOfBorrowingToken)
+        );
+        console.log(
+            "11 flashSwapAmountOfBorrowingToken %s",
+            flashSwapAmountOfBorrowingToken 
         );
 
         address collateralTokenAddress = ICErc20(positionInfo.cTokenCollateralAddress)
@@ -233,6 +258,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         path[1] = borrowingTokenAddress;
         s_flashSwapPath = path;
 
+        console.log("ffff");
         IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
     }
 
@@ -242,6 +268,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 amount1,
         bytes calldata data
     ) external override {
+        console.log("ffffaaa");
+
         (
             address collateralTokenOrCToken, //开仓对应于token, 平仓对应于cToken
             address borrowingTokenOrCToken, //开仓对应于token, 平仓对应于cToken
@@ -330,6 +358,17 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 repayAmountOfCollateralTokenForFlash = IUniswapV2Router(i_uniswapV2RouterAddress)
             .getAmountsIn(flashSwapAmountOfBorrowingToken, s_flashSwapPath)[0];
 
+        console.log(
+            "22 repayAmountOfCollateralTokenForFlash %s",
+            repayAmountOfCollateralTokenForFlash
+        );
+        console.log(
+            "totalCollateralAmountOfCollateralCToken %s",
+            totalCollateralAmountOfCollateralCToken
+        );
+        console.log("before redeem, this balanceof collateralCTOKEN:%s",_ERC20BalanceOf(collateralCTokenAddress, address(this)));
+        console.log("before redeem, this balanceof collateraltoken:%s",_ERC20BalanceOf(collateralTokenAddress, address(this)));
+
         // 赎回:cToken=>token
         if (isCloseAllAmount) {
             error = collateralCToken.redeem(totalCollateralAmountOfCollateralCToken);
@@ -340,6 +379,9 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             //todo: 第一版不会到这里, 后续版本考虑此情况
             require(false, "cannot be here");
         }
+
+        console.log("after redeem, this balanceof collateralCTOKEN:%s",_ERC20BalanceOf(collateralCTokenAddress, address(this)));
+        console.log("after redeem, this balanceof collateraltoken:%s",_ERC20BalanceOf(collateralTokenAddress, address(this)));
 
         //还闪电贷
         address pair = UniswapV2Library.pairFor(
@@ -406,16 +448,20 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         );
         _safeTransfer(s_flashSwapPath[0], pair, borrowAmountOfBorrowingToken);
 
+        console.log("999");
         uint256 collateralAmountOfCollateralCToken = _tokenAmount2CTokenAmount(
             cTokenCollateral,
             collateralToken,
             totalCollateralAmount
         );
+        console.log("zzz");
 
         ICErc20 borrowingCToken = ICErc20(cTokenBorrowing);
         uint256 borrowBalanceCurrentOfBorrowingToken = borrowingCToken.borrowBalanceCurrent(
             address(this)
         );
+        console.log("xxx");
+
         //保存仓位信息
         uint256 positionId = ++s_lastPositionId;
         PositionInfo memory newPosition = PositionInfo(
@@ -451,6 +497,9 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             collateralAmountOfCallateralToken
         );
 
+        console.log("collateralAmountOfCallateralToken:%s", collateralAmountOfCallateralToken);
+        console.log("borrowAmountOfBorrowingToken:%s", borrowAmountOfBorrowingToken);
+
         uint256 error;
 
         // Supply underlying as collateral, get cToken in return
@@ -458,6 +507,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (error != 0) {
             revert CollateralLever__CErc20MintFailed(error);
         }
+        console.log("666");
 
         // (error2, liquidity, shortfall) = comptroller.getAccountLiquidity(address(this));
 
@@ -467,11 +517,13 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (errors[0] != 0) {
             revert("Comptroller.enterMarkets failed.");
         }
+        console.log("777");
 
         error = borrowingCToken.borrow(borrowAmountOfBorrowingToken);
         if (error != 0) {
             revert CollateralLever__cErc20BorrowFailed(error);
         }
+        console.log("888");
     }
 
     function _swapToCollateral(
@@ -537,9 +589,22 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         //计算一个ctoken可兑换多少token amount ; 参考:https://docs.compound.finance/v2/#guides
         uint256 cTokenDecimals = 8; // all cTokens have 8 decimal places
         uint256 exchangeRateCurrent = ctoken.exchangeRateCurrent();
+        console.log("aaa");
+
         uint256 mantissa = 18 + token.decimals() - cTokenDecimals;
-        uint112 temp = uint112(tokenAmount) * uint112(10**mantissa);
-        return uint256(UQ112x112.encode(temp).uqdiv(uint112(exchangeRateCurrent)));
+        console.log(
+            "bbb  18+%s+%s, tokenAmount * (10**mantissa):%s",
+            token.decimals(),
+            cTokenDecimals,
+            tokenAmount * (10**mantissa)
+        );
+
+        uint112 temp = uint112(tokenAmount * (10**mantissa));
+        console.log("ccc  temp:%s,exchangeRateCurrent:%s", temp, exchangeRateCurrent);
+        console.log("origaina:     %s", tokenAmount * (10**mantissa) / exchangeRateCurrent);
+        uint256 result = uint256(UQ112x112.encode(temp).uqdiv(uint112(exchangeRateCurrent))) / UQ112x112.Q112;
+        console.log("not origaina: %s", result);
+        return result;
     }
 
     // getter function--------------------------------------

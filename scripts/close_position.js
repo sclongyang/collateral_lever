@@ -56,7 +56,7 @@ async function exec() {
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
-    await closePostion(DAIAddress, XXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, 2)
+    await closePostion(DAIAddress, XXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, 1)
 
     if (network.config.chainId == 31337) {
         console.log(`7777`)

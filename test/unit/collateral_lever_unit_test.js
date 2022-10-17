@@ -23,7 +23,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             tokenBase = getUnderlyingByCTokenAddress(cTokenAddressOfTokenBase)
             tokenQuote = getUnderlyingByCTokenAddress(cTokenAddressOfTokenQuote)
             const underlyingDecimalsOfDAI = 18
-            const underlyingAsCollateral = 0.31 //DAI         
+            const underlyingAsCollateral = 0.031 //DAI         
             investmentAmount = (underlyingAsCollateral * Math.pow(10, underlyingDecimalsOfDAI)).toString();
             investmentIsQuote = false
             lever = 2
@@ -89,8 +89,8 @@ const erc20Abi = require("../../constants/erc20_abi.json")
 
                 //approve to collateralLever                
                 await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-                await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)).to.emit(collateralLeverOnUser, "OpenPositionSucc")
-                const postionInfo = await collateralLeverOnUser.s_userAddress2PositionInfos(user.address, 0)
+                await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort,{gasLimit:9000000})).to.emit(collateralLeverOnUser, "OpenPositionSucc")
+                const postionInfo = await collateralLeverOnUser.s_userAddress2PositionInfos(user.address, 1)
                 console.log(`postion info:"${postionInfo}`)
                 console.log(`cTokenAddressOfTokenBase: ${cTokenAddressOfTokenBase}`)
                 console.log(`cTokenAddressOfTokenQuote: ${cTokenAddressOfTokenQuote}`)
@@ -99,6 +99,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
                     assert(cTokenAddressOfTokenBase.toLowerCase() === postionInfo.cTokenBorrowingAddress.toLowerCase())
                     assert(cTokenAddressOfTokenQuote.toLowerCase() === postionInfo.cTokenCollateralAddress.toLowerCase())
                 } else {
+                    console.log(`${cTokenAddressOfTokenBase.toLowerCase()}, ${postionInfo.cTokenCollateralAddress.toLowerCase()}`)
                     assert(cTokenAddressOfTokenBase.toLowerCase() === postionInfo.cTokenCollateralAddress.toLowerCase())
                     assert(cTokenAddressOfTokenQuote.toLowerCase() === postionInfo.cTokenBorrowingAddress.toLowerCase())
                 }
@@ -114,7 +115,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             it("just_openposition", async () => {
                 console.log(`user:${user.address}`)
                 await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-                await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
+                await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort,{gasLimit:9000000})
             })
         })
 
