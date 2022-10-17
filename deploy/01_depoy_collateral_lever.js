@@ -33,6 +33,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             log: true,
             waitConfirmations: waitBlockConfirmations,
             gasLimit: 9229450,
+            // gasPrice: 10000000000,
         }
     )    
     

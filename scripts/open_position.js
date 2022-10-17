@@ -6,13 +6,13 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 
 async function exec() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
-    let cXXXAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
+    let cXXXAddress = process.env.GOERLI_COMPOUND_CUSDC_ADDRESS
     let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS
 
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        cXXXAddress = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
+        cXXXAddress = process.env.MAINNET_COMPOUND_CUSDC_ADDRESS
         comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
 
     }
@@ -56,7 +56,17 @@ async function exec() {
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
+    // let nonce = 204
+    // const tx = await deployer.sendTransaction({
+    //     to: user.address,
+    //     value: ethers.utils.parseEther("0.001"),
+    //     nonce:nonce,
+    //     gasPrice:13000000000
+    //   })
+    // console.log(`position:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(deployer.address, 1)}`)
+    
     await openPostion(DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
+
 
     if (network.config.chainId == 31337) {
         console.log(`7777`)
@@ -65,16 +75,18 @@ async function exec() {
 }
 
 const openPostion = async (DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort) => {
+    const gasPrice = 10000000000
     await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-
-    const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress, { gasLimit: 3000000 })
-    const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000 })
-
-
+    const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress, { gasLimit: 3000000,gasPrice:gasPrice})
+    const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000,gasPrice:gasPrice})
+    console.log(`txadd: gaslimit:${txAdd.gasLimit.toString()},gasPrice:${txAdd.gasPrice.toString()}`)        
+    await txAdd.wait(1)
+    await txAdd2.wait(1)
+    
     console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
+    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000,gasPrice:gasPrice })
 
-    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
 
     // //----------------------------------------------mytest
 
@@ -107,10 +119,12 @@ const openPostion = async (DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, use
     console.log(`5555`)
 
     const txReceipt = await tx.wait(1)
+
+    console.log(`position:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     console.log(`after:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
 
-    
+
     for (let i = 0; i < txReceipt.events.length; i++) {
         const element = txReceipt.events[i];
         if (element.args != undefined && element.args.positionInfo != undefined) {
