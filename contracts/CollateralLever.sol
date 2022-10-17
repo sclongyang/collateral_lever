@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
@@ -101,7 +101,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 lever,
         bool isShort
     ) external {
-        console.log("111");
         if (tokenBase == tokenQuote) {
             revert CollateralLever__tokenBaseEqTokenQuote();
         }
@@ -114,14 +113,12 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         }
         _checkTokenSupported(tokenBase);
         _checkTokenSupported(tokenQuote);
-        console.log("222");
 
         //资金转移到本合约
         address investmentToken = investmentIsQuote ? tokenQuote : tokenBase;
         // _safeApprove(investmentToken, address(this), investmentAmount);
 
         _safeTransferFrom(investmentToken, msg.sender, address(this), investmentAmount);
-        console.log("333");
 
         address collateralToken;
         address borrowingToken;
@@ -179,10 +176,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         flashSwapPath[0] = borrowingToken;
         flashSwapPath[1] = collateralToken;
         s_flashSwapPath = flashSwapPath;
-        console.log("444");
 
         IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
-        console.log("555");
     }
 
     function closePosition(
@@ -192,14 +187,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
         ICErc20 borrowingCToken = ICErc20(positionInfo.cTokenBorrowingAddress);
 
-        console.log(
-            "positionInfo.borrowedAmountOfBorrowingToken %s",
-            positionInfo.borrowedAmountOfBorrowingToken
-        );
-        console.log(
-            "borrowingCToken.borrowBalanceCurrent(address(this)) %s",
-            borrowingCToken.borrowBalanceCurrent(address(this))
-        );
+        
 
         address collateralTokenAddress = ICErc20(positionInfo.cTokenCollateralAddress)
             .underlying();
@@ -213,7 +201,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         //     borrowingCToken.borrowBalanceCurrent(address(this))) /
         //     s_totalBorrowedTokenAmount[borrowingTokenAddress];
         uint256 flashSwapAmountOfBorrowingToken = positionInfo.borrowedAmountOfBorrowingToken;
-        console.log("11 flashSwapAmountOfBorrowingToken %s", flashSwapAmountOfBorrowingToken);
+        
 
         address pair = UniswapV2Library.pairFor(
             i_uniswapV2FactoryAddress,
@@ -246,7 +234,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         path[1] = borrowingTokenAddress;
         s_flashSwapPath = path;
 
-        console.log("ffff");
         IUniswapV2Pair(pair).swap(amount0, amount1, address(this), data);
     }
 
@@ -256,7 +243,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 amount1,
         bytes calldata data
     ) external override {
-        console.log("ffffaaa");
 
         (
             address collateralTokenOrCToken, //开仓对应于token, 平仓对应于cToken
@@ -333,22 +319,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             borrowingCTokenAddress,
             flashSwapAmountOfBorrowingToken
         );
-        console.log(
-            "before borrowingCToken amount of this:%s",
-            borrowingCToken.balanceOf(address(this))
-        );
-        console.log(
-            "before borrowingToken amount of this:%s",
-            _ERC20BalanceOf(borrowingTokenAddress, address(this))
-        );
-        console.log(
-            "before repay callateralCToken amount of this:%s",
-            collateralCToken.balanceOf(address(this))
-        );
-        console.log(
-            "before repay callateralToken amount of this:%s",
-            _ERC20BalanceOf(collateralTokenAddress, address(this))
-        );
+        
 
         // -1 表示全额还款，包括所有利息
         uint256 error = borrowingCToken.repayBorrow(flashSwapAmountOfBorrowingToken);
@@ -357,45 +328,12 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             revert CollateralLever__cErc20RepayBorrowFailed(error);
         }
         s_totalBorrowedTokenAmount[borrowingTokenAddress] -= flashSwapAmountOfBorrowingToken;
-        console.log(
-            "after borrowingCToken amount of this:%s",
-            borrowingCToken.balanceOf(address(this))
-        );
-        console.log(
-            "after borrowingToken amount of this:%s",
-            _ERC20BalanceOf(borrowingTokenAddress, address(this))
-        );
-        console.log(
-            "before repay callateralCToken amount of this:%s",
-            collateralCToken.balanceOf(address(this))
-        );
-        console.log(
-            "before repay callateralToken amount of this:%s",
-            _ERC20BalanceOf(collateralTokenAddress, address(this))
-        );
-
+        
         //闪电贷还款金额
         uint256 repayAmountOfCollateralTokenForFlash = IUniswapV2Router(i_uniswapV2RouterAddress)
             .getAmountsIn(flashSwapAmountOfBorrowingToken, s_flashSwapPath)[0];
 
-        console.log(
-            "22 repayAmountOfCollateralTokenForFlash %s",
-            repayAmountOfCollateralTokenForFlash
-        );
-
-        console.log(
-            "totalCollateralAmountOfCollateralCToken %s",
-            totalCollateralAmountOfCollateralCToken
-        );
-        console.log(
-            "before redeem, this balanceof collateralCTOKEN:%s",
-            _ERC20BalanceOf(collateralCTokenAddress, address(this))
-        );
-        console.log(
-            "before redeem, this balanceof collateraltoken:%s",
-            _ERC20BalanceOf(collateralTokenAddress, address(this))
-        );
-
+        
         // 赎回:cToken=>token
         if (isCloseAllAmount) {
             error = collateralCToken.redeem(totalCollateralAmountOfCollateralCToken);
@@ -406,20 +344,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             //todo: 第一版不会到这里, 后续版本考虑此情况
             require(false, "cannot be here");
         }
-        console.log(
-            "after redeem borrowingCToken amount of this:%s",
-            borrowingCToken.balanceOf(address(this))
-        );
-
-        console.log(
-            "after redeem, this balanceof collateralCTOKEN:%s",
-            _ERC20BalanceOf(collateralCTokenAddress, address(this))
-        );
-        console.log(
-            "after redeem, this balanceof collateraltoken:%s",
-            _ERC20BalanceOf(collateralTokenAddress, address(this))
-        );
-
+        
         //还闪电贷
         address pair = UniswapV2Library.pairFor(
             i_uniswapV2FactoryAddress,
@@ -429,22 +354,13 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
         _safeTransfer(s_flashSwapPath[0], pair, repayAmountOfCollateralTokenForFlash);
 
-        console.log(
-            "repayAmountOfCollateralTokenForFlash:%s,before transferAmountToUser, user amountofcollateralTokenAddress: %s",
-            repayAmountOfCollateralTokenForFlash,
-            _ERC20BalanceOf(collateralTokenAddress, user)
-        );
+        
         //transfer to user
         uint256 transferAmountToUser = _ERC20BalanceOf(collateralTokenAddress, address(this));
         if (transferAmountToUser > 0) {
             _safeTransfer(collateralTokenAddress, user, transferAmountToUser);
         }
-        console.log("neet transferAmountToUser:%s", transferAmountToUser);
-        console.log(
-            "after transferAmountToUser, user amountofcollateralTokenAddress: %s",
-            _ERC20BalanceOf(collateralTokenAddress, user)
-        );
-
+        
         //第一版直接删除仓位信息
         PositionInfo memory positionInfo = s_userAddress2PositionInfos[user][positionId];
         if (positionInfo.positionId == 0) {
@@ -529,8 +445,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             collateralAmountOfCallateralToken
         );
 
-        console.log("collateralAmountOfCallateralToken:%s", collateralAmountOfCallateralToken);
-        console.log("borrowAmountOfBorrowingToken:%s", borrowAmountOfBorrowingToken);
+        
 
         uint256 error;
         uint256 oldAmount = collateralCToken.balanceOf(address(this));
@@ -539,7 +454,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (error != 0) {
             revert CollateralLever__CErc20MintFailed(error);
         }
-        console.log("666");
+        
         collateralAmountOfCollateralCToken = collateralCToken.balanceOf(address(this)) - oldAmount;
         // (error2, liquidity, shortfall) = comptroller.getAccountLiquidity(address(this));
         address[] memory cTokens = new address[](1);
