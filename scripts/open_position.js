@@ -63,7 +63,7 @@ async function exec() {
     //     nonce:nonce,
     //     gasPrice:13000000000
     //   })
-    // console.log(`position:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(deployer.address, 1)}`)
+    console.log(`position 1:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(deployer.address, 1)}`)
     
     await openPostion(DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
 
@@ -86,35 +86,6 @@ const openPostion = async (DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, use
     console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
     const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000,gasPrice:gasPrice })
-
-
-    // //----------------------------------------------mytest
-
-    // const mantissa = investmentAmount;
-
-    // const DAIWithUser = await ERC20TokenWithSigner(DAIAddress, user)
-
-    // const myTestContractByDeployer = await ethers.getContract("MyTest", deployer)
-
-    // const myTestContractByUser = await myTestContractByDeployer.connect(user)
-
-    // await DAIWithUser.transfer(myTestContractByUser.address, mantissa, { gasLimit: 3000000 })
-
-
-    // console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, mytestContract balance:${await getERC20Balance(DAIAddress, myTestContractByUser.address)}`)
-    // console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, mytestContract balance:${await getERC20Balance(XXXAddress, myTestContractByUser.address)}`)
-    // console.log(`comptrollerAddress: ${comptrollerAddress}`)
-    // const param = {
-    //     _cEtherAddress: cXXXAddress, //borrow
-    //     _comptrollerAddress: comptrollerAddress,
-    //     _cTokenAddress: cDAIAddress, //collateral
-    //     _underlyingAddress: DAIAddress,
-    //     _underlyingToSupplyAsCollateral: mantissa
-    // }
-    // // const tx = await myTestContractByUser.erc20BorrowErc20Example(param,{gasLimit:3000000})
-    // const tx = await myTestContractByUser._borrow(comptrollerAddress, cDAIAddress, cXXXAddress, mantissa, 11, { gasLimit: 3000000 })
-
-    // //----------------------------------------------mytest over
 
     console.log(`5555`)
 
