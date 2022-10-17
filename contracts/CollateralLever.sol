@@ -43,7 +43,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 collateralAmountOfCollateralToken;
         uint256 collateralAmountOfCollateralCToken;
         uint256 borrowedAmountOfBorrowingToken;
-        uint256 borrowBalanceCurrentOfBorrowingToken;
         bool isShort; //是否做空
         uint256 positionId;
     }
@@ -62,6 +61,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     address private immutable i_unitrollerAddress;
     address[] private s_flashSwapPath;
     uint256 private s_lastPositionId;
+    mapping(address => uint256) private s_totalBorrowedTokenAmount; //tokenAddress, totalBorrowedTokenAmount
     mapping(address => address) public s_token2CToken; //underlying token address to ctoken address
     mapping(address => mapping(uint256 => PositionInfo)) public s_userAddress2PositionInfos;
 
@@ -190,16 +190,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     ) external OwnerOfPosition(msg.sender, positionId) {
         PositionInfo memory positionInfo = s_userAddress2PositionInfos[msg.sender][positionId];
 
-        //是否平仓全量
-        bool isCloseAllAmount = true; //第一版只实现 全量平仓
         ICErc20 borrowingCToken = ICErc20(positionInfo.cTokenBorrowingAddress);
-
-        //todo:待研究如何计算每个仓位的borrowingCToken利息, 第一版暂用简单粗暴的算法:按比例
-        uint112 temp = uint112(positionInfo.borrowedAmountOfBorrowingToken) *
-            uint112(borrowingCToken.borrowBalanceCurrent(address(this)));
-        uint256 flashSwapAmountOfBorrowingToken = (positionInfo.borrowedAmountOfBorrowingToken *
-            borrowingCToken.borrowBalanceCurrent(address(this))) /
-            positionInfo.borrowBalanceCurrentOfBorrowingToken;
 
         console.log(
             "positionInfo.borrowedAmountOfBorrowingToken %s",
@@ -209,20 +200,19 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             "borrowingCToken.borrowBalanceCurrent(address(this)) %s",
             borrowingCToken.borrowBalanceCurrent(address(this))
         );
-        console.log("temp %s", temp);
-        console.log(
-            "positionInfo.borrowBalanceCurrentOfBorrowingToken %s",
-            positionInfo.borrowBalanceCurrentOfBorrowingToken
-        );
-        console.log(
-            "uint112 positionInfo.borrowBalanceCurrentOfBorrowingToken %s",
-            uint112(positionInfo.borrowBalanceCurrentOfBorrowingToken)
-        );
-        console.log("11 flashSwapAmountOfBorrowingToken %s", flashSwapAmountOfBorrowingToken);
 
         address collateralTokenAddress = ICErc20(positionInfo.cTokenCollateralAddress)
             .underlying();
         address borrowingTokenAddress = borrowingCToken.underlying();
+
+        bool isCloseAllAmount = true; //第一版只实现 全量平仓
+        //todo:待研究如何计算每个仓位的borrowingCToken利息, 第一版暂用简单粗暴的算法:按比例, 第一版只实现 全量平仓
+        //第一版:flashSwapAmountOfBorrowingToken = 利息+positionInfo.borrowedAmountOfBorrowingToken
+        //其中: 利息/总利息(borrowBalanceCurrent- s_totalBorrowedTokenAmount[borrowingTokenAddress]) == positionInfo.borrowedAmountOfBorrowingToken/s_totalBorrowedTokenAmount[borrowingTokenAddress]
+        uint256 flashSwapAmountOfBorrowingToken = (positionInfo.borrowedAmountOfBorrowingToken *
+            borrowingCToken.borrowBalanceCurrent(address(this))) /
+            s_totalBorrowedTokenAmount[borrowingTokenAddress];
+        console.log("11 flashSwapAmountOfBorrowingToken %s", flashSwapAmountOfBorrowingToken);
 
         address pair = UniswapV2Library.pairFor(
             i_uniswapV2FactoryAddress,
@@ -342,14 +332,29 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             borrowingCTokenAddress,
             flashSwapAmountOfBorrowingToken
         );
+        console.log(
+            "before borrowingCToken amount of this:%s",
+            borrowingCToken.balanceOf(address(this))
+        );
+        console.log(
+            "before borrowingToken amount of this:%s",
+            _ERC20BalanceOf(borrowingTokenAddress, address(this))
+        );
 
         // -1 表示全额还款，包括所有利息
-        uint256 error = borrowingCToken.repayBorrow(
-            isCloseAllAmount ? UINT256_MAX : flashSwapAmountOfBorrowingToken
-        );
+        uint256 error = borrowingCToken.repayBorrow(flashSwapAmountOfBorrowingToken);
         if (error != 0) {
             revert CollateralLever__cErc20RepayBorrowFailed(error);
         }
+        s_totalBorrowedTokenAmount[borrowingTokenAddress] -= flashSwapAmountOfBorrowingToken;
+        console.log(
+            "after borrowingCToken amount of this:%s",
+            borrowingCToken.balanceOf(address(this))
+        );
+        console.log(
+            "after borrowingToken amount of this:%s",
+            _ERC20BalanceOf(borrowingTokenAddress, address(this))
+        );
 
         //闪电贷还款金额
         uint256 repayAmountOfCollateralTokenForFlash = IUniswapV2Router(i_uniswapV2RouterAddress)
@@ -382,6 +387,10 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             //todo: 第一版不会到这里, 后续版本考虑此情况
             require(false, "cannot be here");
         }
+        console.log(
+            "after redeem borrowingCToken amount of this:%s",
+            borrowingCToken.balanceOf(address(this))
+        );
 
         console.log(
             "after redeem, this balanceof collateralCTOKEN:%s",
@@ -401,11 +410,21 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
         _safeTransfer(s_flashSwapPath[0], pair, repayAmountOfCollateralTokenForFlash);
 
+        console.log(
+            "repayAmountOfCollateralTokenForFlash:%s,before transferAmountToUser, user amountofcollateralTokenAddress: %s",
+            repayAmountOfCollateralTokenForFlash,
+            _ERC20BalanceOf(collateralTokenAddress, user)
+        );
         //transfer to user
         uint256 transferAmountToUser = _ERC20BalanceOf(collateralTokenAddress, address(this));
         if (transferAmountToUser > 0) {
             _safeTransfer(collateralTokenAddress, user, transferAmountToUser);
         }
+        console.log("neet transferAmountToUser:%s", transferAmountToUser);
+        console.log(
+            "after transferAmountToUser, user amountofcollateralTokenAddress: %s",
+            _ERC20BalanceOf(collateralTokenAddress, user)
+        );
 
         //第一版直接删除仓位信息
         PositionInfo memory positionInfo = s_userAddress2PositionInfos[user][positionId];
@@ -442,7 +461,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         uint256 totalCollateralAmount = flashSwapAmountOfCallateralToken +
             originalCollateralAmountOfCollateralToken;
 
-        uint256 collateralAmountOfCollateralCToken =  _borrow(
+        uint256 collateralAmountOfCollateralCToken = _borrow(
             cTokenCollateral,
             cTokenBorrowing,
             totalCollateralAmount,
@@ -457,11 +476,6 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         );
         _safeTransfer(s_flashSwapPath[0], pair, borrowAmountOfBorrowingToken);
 
-        ICErc20 borrowingCToken = ICErc20(cTokenBorrowing);
-        uint256 borrowBalanceCurrentOfBorrowingToken = borrowingCToken.borrowBalanceCurrent(
-            address(this)
-        );
-
         //保存仓位信息
         uint256 positionId = ++s_lastPositionId;
         PositionInfo memory newPosition = PositionInfo(
@@ -469,13 +483,12 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             cTokenBorrowing,
             totalCollateralAmount,
             collateralAmountOfCollateralCToken,
-            borrowAmountOfBorrowingToken,            
-            borrowBalanceCurrentOfBorrowingToken,
+            borrowAmountOfBorrowingToken,
             isShort,
             positionId
         );
         s_userAddress2PositionInfos[user][positionId] = newPosition;
-
+        s_totalBorrowedTokenAmount[borrowingToken] += borrowAmountOfBorrowingToken;
         emit OpenPositionSucc(user, newPosition);
     }
 
@@ -516,6 +529,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         if (errors[0] != 0) {
             revert("Comptroller.enterMarkets failed.");
         }
+
         error = borrowingCToken.borrow(borrowAmountOfBorrowingToken);
         if (error != 0) {
             revert CollateralLever__cErc20BorrowFailed(error);
