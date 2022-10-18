@@ -32,7 +32,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             args: arguments,
             log: true,
             waitConfirmations: waitBlockConfirmations,
-            gasLimit: 9229450,
+            // gasLimit: 9229450,
             // gasPrice: 10000000000,
         }
     )    
@@ -47,7 +47,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const collateralLeverOnDeployer = await ethers.getContract("CollateralLever", deployer)
     console.log(`addSupportedCToken 3 cTokens for init`)
     cTokens.forEach(async element => {
-        const tx = await collateralLeverOnDeployer.addSupportedCToken(element)
+        // const tx = await collateralLeverOnDeployer.addSupportedCToken(element)
     });
 
 

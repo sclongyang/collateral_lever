@@ -6,13 +6,15 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 
 async function exec() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
-    let cXXXAddress = process.env.GOERLI_COMPOUND_CUSDC_ADDRESS
+    // let cXXXAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
+    let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
     let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS
 
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        cXXXAddress = process.env.MAINNET_COMPOUND_CUSDC_ADDRESS
+        // cXXXAddress = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
+        cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
         comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
 
     }
@@ -27,7 +29,7 @@ async function exec() {
     const tokenBase = DAIAddress
     const tokenQuote = XXXAddress
     const underlyingDecimalsOfDAI = 18
-    const underlyingAsCollateral = 0.031 //DAI         
+    const underlyingAsCollateral = 0.02 //DAI         
     const investmentAmount = (underlyingAsCollateral * Math.pow(10, underlyingDecimalsOfDAI)).toString();
     const investmentIsQuote = false
     const lever = 2
@@ -56,16 +58,21 @@ async function exec() {
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
-    // let nonce = 204
+    // let nonce = 238    
+    // console.log(`cur nonce:${nonce}`)
     // const tx = await deployer.sendTransaction({
     //     to: user.address,
     //     value: ethers.utils.parseEther("0.001"),
-    //     nonce:nonce,
-    //     gasPrice:13000000000
+    //     nonce:nonce++,
+    //     gasPrice:35000000000
     //   })
-    console.log(`position 1:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(deployer.address, 1)}`)
-    
-    await openPostion(DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
+
+
+    console.log(`position 1:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}`)
+    console.log(`position 2:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 2)}`)
+    console.log(`position 3:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 3)}`)
+
+    // await openPostion(DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
 
 
     if (network.config.chainId == 31337) {
@@ -75,17 +82,35 @@ async function exec() {
 }
 
 const openPostion = async (DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort) => {
-    const gasPrice = 10000000000
-    await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-    const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress, { gasLimit: 3000000,gasPrice:gasPrice})
-    const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000,gasPrice:gasPrice})
-    console.log(`txadd: gaslimit:${txAdd.gasLimit.toString()},gasPrice:${txAdd.gasPrice.toString()}`)        
-    await txAdd.wait(1)
-    await txAdd2.wait(1)
-    
+    const gasPrice = 25000000000
+    const approvedAmount = await (await ERC20TokenWithSigner(DAIAddress, user)).allowance(user.address, collateralLeverOnUser.address)
+    console.log(`approvedAmount: ${approvedAmount}, investmentAmount: ${investmentAmount}`)
+    if (approvedAmount < Number(investmentAmount)) {
+        console.log(`start approve from user to contract`)
+        const tx = await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
+        await tx.wait(1)
+    }else{
+        console.log(`无需approve`)
+    }
+
+    let ctoken = await collateralLeverOnDeployer.s_token2CToken(DAIAddress)
+    console.log(`ctoken1:${ctoken}`)
+    if (ctoken == ethers.constants.AddressZero) {
+        const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress, { gasLimit: 3000000 })//, gasPrice: gasPrice
+        console.log(`addSupportedCToken1: gaslimit:${txAdd.gasLimit.toString()},gasPrice:${txAdd.gasPrice.toString()}`)
+        await txAdd.wait(1)
+    }
+    ctoken = await collateralLeverOnDeployer.s_token2CToken(XXXAddress)
+    console.log(`ctoken2:${ctoken}`)
+    if (ctoken == ethers.constants.AddressZero) {
+        const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000})//, gasPrice: gasPrice 
+        console.log(`addSupportedCToken2: gaslimit:${txAdd.gasLimit.toString()},gasPrice:${txAdd.gasPrice.toString()}`)
+        await txAdd.wait(1)
+    }
     console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
-    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000,gasPrice:gasPrice })
+    // console.log(`openPosition: tokenBase:${tokenBase},tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},lever:${lever}`)
+    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 3000000})//, { gasLimit: 4500000, gasPrice: gasPrice }
 
     console.log(`5555`)
 
@@ -112,7 +137,7 @@ const getUnderlyingByCTokenAddress = async (ctokenAddress) => {
 
 const approveERC20 = async (tokenAddress, from, to, amount) => {
     const DAIWithUser = await ERC20TokenWithSigner(tokenAddress, from)
-    await DAIWithUser.approve(to, amount)
+    return await DAIWithUser.approve(to, amount)
 }
 
 const ERC20TokenWithSigner = async (tokenAddress, signerAccount) => {

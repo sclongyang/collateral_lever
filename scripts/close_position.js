@@ -56,7 +56,8 @@ async function exec() {
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
-    await closePostion(DAIAddress, XXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, 1)
+
+    await closePostion(DAIAddress, XXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, 2)
 
     if (network.config.chainId == 31337) {
         console.log(`7777`)
@@ -68,8 +69,8 @@ const closePostion = async (DAIAddress, XXXAddress, user, collateralLeverOnDeplo
     console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
     console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
 
-    const postionInfo = await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, positionId)    
-    if (postionInfo.positionId != 0) {        
+    const postionInfo = await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, positionId)
+    if (postionInfo.positionId != 0) {
         console.log(`positionInfo:${postionInfo}`)
 
         const tx = await collateralLeverOnUser.closePosition(positionId, { gasLimit: 9000000 })
@@ -79,9 +80,9 @@ const closePostion = async (DAIAddress, XXXAddress, user, collateralLeverOnDeplo
         console.log(`after:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
 
         const postionInfo2 = await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, positionId)
-        console.log(`after closePosition postionInfo should be null:${postionInfo2}`)        
+        console.log(`after closePosition postionInfo should be null:${postionInfo2}`)
     }
-    else{
+    else {
         console.log(`error! user dont have positionId:${positionId}`)
     }
 }

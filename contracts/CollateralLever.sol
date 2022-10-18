@@ -35,7 +35,7 @@ error CollateralLever__cErc20RepayBorrowFailed(uint256 error);
 // error CollateralLever__borrowedAmountLessThanRepayAmount();
 
 contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
-    using UQ112x112 for uint224;
+    // using UQ112x112 for uint224;
 
     struct PositionInfo {
         address cTokenCollateralAddress;
