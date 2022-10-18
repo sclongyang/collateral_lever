@@ -57,7 +57,7 @@ async function exec() {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
 
-    await closePostion(DAIAddress, XXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, 2)
+    await closePostion(DAIAddress, XXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, 3)
 
     if (network.config.chainId == 31337) {
         console.log(`7777`)
@@ -74,7 +74,7 @@ const closePostion = async (DAIAddress, XXXAddress, user, collateralLeverOnDeplo
         console.log(`positionInfo:${postionInfo}`)
 
         const tx = await collateralLeverOnUser.closePosition(positionId, { gasLimit: 9000000 })
-        console.log(`5555`)
+        console.log(`exec...`)
         const txReceipt = await tx.wait(1)
         console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
         console.log(`after:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)

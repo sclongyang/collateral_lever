@@ -68,11 +68,11 @@ async function exec() {
     //   })
 
 
-    console.log(`position 1:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}`)
-    console.log(`position 2:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 2)}`)
-    console.log(`position 3:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 3)}`)
+    // console.log(`position 1:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}`)
+    // console.log(`position 2:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 2)}`)
+    // console.log(`position 3:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 3)}`)
 
-    // await openPostion(DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
+    await openPostion(DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
 
 
     if (network.config.chainId == 31337) {
@@ -86,7 +86,7 @@ const openPostion = async (DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, use
     const approvedAmount = await (await ERC20TokenWithSigner(DAIAddress, user)).allowance(user.address, collateralLeverOnUser.address)
     console.log(`approvedAmount: ${approvedAmount}, investmentAmount: ${investmentAmount}`)
     if (approvedAmount < Number(investmentAmount)) {
-        console.log(`start approve from user to contract`)
+        console.log(`start approve from user to contract:${investmentAmount}`)
         const tx = await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
         await tx.wait(1)
     }else{
@@ -112,7 +112,7 @@ const openPostion = async (DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, use
     // console.log(`openPosition: tokenBase:${tokenBase},tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},lever:${lever}`)
     const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 3000000})//, { gasLimit: 4500000, gasPrice: gasPrice }
 
-    console.log(`5555`)
+    console.log(`exec...`)
 
     const txReceipt = await tx.wait(1)
 
