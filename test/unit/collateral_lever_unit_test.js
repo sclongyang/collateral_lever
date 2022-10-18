@@ -38,8 +38,11 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
             await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount)
 
-            // console.log(`balance: deployer: ${await deployer.getBalance()}, user:${await user.getBalance()}`)     
-            // console.log(`tokenBase balance: deployer: ${await getERC20Balance(tokenBase,deployer.address) }, user:${await getERC20Balance(tokenBase,user.address)}`)              
+            //addSupportedCToken
+            const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cTokenAddressOfTokenBase, { gasLimit: 3000000 })//, gasPrice: gasPrice
+            await txAdd.wait(1)            
+            const txAdd2 = await collateralLeverOnDeployer.addSupportedCToken(cTokenAddressOfTokenQuote, { gasLimit: 3000000 })//, gasPrice: gasPrice 
+            await txAdd2.wait(1)
         })
         describe("addSupportedCToken", () => {
             it("event AddSupportedCToken is emitted and check s_token2CToken ", async () => {
@@ -89,7 +92,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
 
                 //approve to collateralLever                
                 await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-                await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort,{gasLimit:9000000})).to.emit(collateralLeverOnUser, "OpenPositionSucc")
+                await expect(collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })).to.emit(collateralLeverOnUser, "OpenPositionSucc")
                 const postionInfo = await collateralLeverOnUser.s_userAddress2PositionInfos(user.address, 1)
                 console.log(`postion info:"${postionInfo}`)
                 console.log(`cTokenAddressOfTokenBase: ${cTokenAddressOfTokenBase}`)
@@ -115,7 +118,7 @@ const erc20Abi = require("../../constants/erc20_abi.json")
             it("just_openposition", async () => {
                 console.log(`user:${user.address}`)
                 await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
-                await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort,{gasLimit:9000000})
+                await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 9000000 })
             })
         })
 

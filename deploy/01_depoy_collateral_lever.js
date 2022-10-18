@@ -17,11 +17,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         //fork mainnet        
         arguments = [process.env.MAINNET_UNISWAP_V2_ROUTER02_ADDRESS, process.env.MAINNET_UNISWAP_V2_FACTORY_ADDRESS, process.env.MAINNET_COMPTROLLER_ADDRESS]
         // cTokens = [process.env.MAINNET_COMPOUND_CDAI_ADDRESS, process.env.MAINNET_COMPOUND_CUNI_ADDRESS, process.env.MAINNET_COMPOUND_CUSDC_ADDRES]
-        cTokens = [process.env.MAINNET_COMPOUND_CDAI_ADDRESS, process.env.MAINNET_COMPOUND_CUNI_ADDRESS, process.env.MAINNET_COMPOUND_CUSDC_ADDRESS]
+        cTokens = [process.env.MAINNET_COMPOUND_CDAI_ADDRESS, process.env.MAINNET_COMPOUND_CUNI_ADDRESS, process.env.MAINNET_COMPOUND_CUSDC_ADDRESS,process.env.MAINNET_COMPOUND_CCOMP_ADDRESS]
     } else {
         //goerli        
         arguments = [process.env.GOERLI_UNISWAP_V2_ROUTER02_ADDRESS, process.env.GOERLI_UNISWAP_V2_FACTORY_ADDRESS, process.env.GOERLI_UNITROLLER_ADDRESS]
-        cTokens = [process.env.GOERLI_COMPOUND_CDAI_ADDRESS, process.env.GOERLI_COMPOUND_CUNI_ADDRESS, process.env.GOERLI_COMPOUND_CUSDC_ADDRESS]
+        cTokens = [process.env.GOERLI_COMPOUND_CDAI_ADDRESS, process.env.GOERLI_COMPOUND_CUNI_ADDRESS, process.env.GOERLI_COMPOUND_CUSDC_ADDRESS,process.env.GOERLI_COMPOUND_CCOMP_ADDRESS]
     }
 
     console.log("begin deploy CollateralLever")
@@ -47,7 +47,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const collateralLeverOnDeployer = await ethers.getContract("CollateralLever", deployer)
     console.log(`addSupportedCToken 3 cTokens for init`)
     cTokens.forEach(async element => {
-        // const tx = await collateralLeverOnDeployer.addSupportedCToken(element)
+        const tx = await collateralLeverOnDeployer.addSupportedCToken(element)
     });
 
 
