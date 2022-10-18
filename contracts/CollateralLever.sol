@@ -38,6 +38,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
     // using UQ112x112 for uint224;
 
     struct PositionInfo {
+        address userAddress;
         address cTokenCollateralAddress;
         address cTokenBorrowingAddress;
         uint256 collateralAmountOfCollateralToken;
@@ -414,6 +415,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         //保存仓位信息
         uint256 positionId = ++s_lastPositionId;
         PositionInfo memory newPosition = PositionInfo(
+            user,
             cTokenCollateral,
             cTokenBorrowing,
             totalCollateralAmount,
