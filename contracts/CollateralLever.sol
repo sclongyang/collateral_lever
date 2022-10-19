@@ -144,8 +144,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             } else {
                 path[0] = tokenBase;
                 path[1] = tokenQuote;
-            }            
-            //_safeApprove(investmentToken, i_uniswapV2RouterAddress, investmentAmount); 此处需要approve
+            }          
+            _safeApprove(investmentToken, i_uniswapV2RouterAddress, investmentAmount); //此处需要approve
             originalCollateralAmount = _swapToCollateral(
                 investmentAmount,
                 path,

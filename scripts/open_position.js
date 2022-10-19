@@ -6,15 +6,15 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 
 async function exec() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
-    // let cXXXAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
-    let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
+    let cXXXAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
+    // let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
     let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS
 
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        // cXXXAddress = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
-        cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
+        cXXXAddress = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
+        // cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
         comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
 
     }
@@ -45,15 +45,23 @@ async function exec() {
     const isLocal = developmentChains.includes(network.name)
     if (isLocal) {
         console.log(`is local:${network.name}`)
-        const investmentAmount2 = (100 * Math.pow(10, 18)).toString();
+        const investmentAmount2 = (1 * Math.pow(10, 18)).toString();
         //transfer DAI to user
-        const DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
-        const addressWithDAI = "0x604981db0C06Ea1b37495265EDa4619c8Eb95A3D"
-        await network.provider.send("hardhat_impersonateAccount", [addressWithDAI])
-        const impersonatedSigner = await ethers.getSigner(addressWithDAI)
-        // const DAIAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F"            
-        const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
-        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2)
+        // const DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
+        // const addressWithDAI = "0x604981db0C06Ea1b37495265EDa4619c8Eb95A3D"
+        // await network.provider.send("hardhat_impersonateAccount", [addressWithDAI])
+        // const impersonatedSigner = await ethers.getSigner(addressWithDAI)           
+        // const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
+        // await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2,{gasLimit:210000})
+
+        //transfer XXX to user
+        const addressWithUNI = "0x47173B170C64d16393a52e6C480b3Ad8c302ba1e"
+        await network.provider.send("hardhat_impersonateAccount", [addressWithUNI])
+        const impersonatedSigner2 = await ethers.getSigner(addressWithUNI)   
+        const tokenConnectedByImpersonatedSigner2 = await ethers.getContractAt(erc20Abi, XXXAddress, impersonatedSigner2)
+        console.log(`comp balance:${await tokenConnectedByImpersonatedSigner2.balanceOf(addressWithUNI)/Math.pow(10, 18)}`)        
+        await tokenConnectedByImpersonatedSigner2.transfer(user.address, investmentAmount2,{gasLimit:210000})
+        console.log(`fsafsafa`)
     }
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
@@ -83,14 +91,14 @@ async function exec() {
 
 const openPostion = async (cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort) => {
     const gasPrice = 25000000000
-    const investmentTokenAddress = investmentIsQuote?tokenQuote:tokenBase
+    const investmentTokenAddress = investmentIsQuote ? tokenQuote : tokenBase
     const approvedAmount = await (await ERC20TokenWithSigner(investmentTokenAddress, user)).allowance(user.address, collateralLeverOnUser.address)
     console.log(`approvedAmount: ${approvedAmount}, investmentAmount: ${investmentAmount}`)
     if (approvedAmount < Number(investmentAmount)) {
         console.log(`start approve from user to contract:${investmentAmount}`)
         const tx = await approveERC20(investmentTokenAddress, user, collateralLeverOnUser.address, investmentAmount)
         await tx.wait(1)
-    }else{
+    } else {
         console.log(`无需approve`)
     }
 
@@ -104,14 +112,14 @@ const openPostion = async (cDAIAddress, cXXXAddress, user, collateralLeverOnDepl
     ctoken = await collateralLeverOnDeployer.s_token2CToken(tokenQuote)
     console.log(`ctoken2:${ctoken}`)
     if (ctoken == ethers.constants.AddressZero) {
-        const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000})//, gasPrice: gasPrice 
+        const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000 })//, gasPrice: gasPrice 
         console.log(`addSupportedCToken2: gaslimit:${txAdd.gasLimit.toString()},gasPrice:${txAdd.gasPrice.toString()}`)
         await txAdd.wait(1)
     }
     console.log(`before:tokenBase user balance:${await getERC20Balance(tokenBase, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(tokenBase, collateralLeverOnUser.address)}`)
     console.log(`before:tokenQuote user balance:${await getERC20Balance(tokenQuote, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(tokenQuote, collateralLeverOnUser.address)}`)
     console.log(`openPosition: tokenBase:${tokenBase},tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},investmentIsQuote:${investmentIsQuote},lever:${lever},isshort:${isShort}`)
-    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 3000000})//, { gasLimit: 4500000, gasPrice: gasPrice }
+    const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 3000000 })//, { gasLimit: 4500000, gasPrice: gasPrice }
 
     console.log(`exec...`)
 
