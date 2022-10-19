@@ -6,14 +6,14 @@ const { developmentChains, VERIFICATION_BLOCK_CONFIRMATIONS } = require("../help
 
 async function exec() {
     let cDAIAddress = process.env.GOERLI_COMPOUND_CDAI_ADDRESS
-    let cXXXAddress = process.env.GOERLI_COMPOUND_CUNI_ADDRESS
+    let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
     // let cXXXAddress = process.env.GOERLI_COMPOUND_CCOMP_ADDRESS
     let comptrollerAddress = process.env.GOERLI_COMPTROLLER_ADDRESS
 
     console.log(`network.config.chainId:${network.config.chainId}`)
     if (network.config.chainId == 31337) {
         cDAIAddress = process.env.MAINNET_COMPOUND_CDAI_ADDRESS
-        cXXXAddress = process.env.MAINNET_COMPOUND_CUNI_ADDRESS
+        cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
         // cXXXAddress = process.env.MAINNET_COMPOUND_CCOMP_ADDRESS
         comptrollerAddress = process.env.MAINNET_COMPTROLLER_ADDRESS
 
@@ -47,12 +47,12 @@ async function exec() {
         console.log(`is local:${network.name}`)
         const investmentAmount2 = (1 * Math.pow(10, 18)).toString();
         //transfer DAI to user
-        // const DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
-        // const addressWithDAI = "0x604981db0C06Ea1b37495265EDa4619c8Eb95A3D"
-        // await network.provider.send("hardhat_impersonateAccount", [addressWithDAI])
-        // const impersonatedSigner = await ethers.getSigner(addressWithDAI)           
-        // const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
-        // await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2,{gasLimit:210000})
+        const DAIAddress = getUnderlyingByCTokenAddress(process.env.MAINNET_COMPOUND_CDAI_ADDRESS)
+        const addressWithDAI = "0x604981db0C06Ea1b37495265EDa4619c8Eb95A3D"
+        await network.provider.send("hardhat_impersonateAccount", [addressWithDAI])
+        const impersonatedSigner = await ethers.getSigner(addressWithDAI)           
+        const tokenConnectedByImpersonatedSigner = await ethers.getContractAt(erc20Abi, DAIAddress, impersonatedSigner)
+        await tokenConnectedByImpersonatedSigner.transfer(user.address, investmentAmount2,{gasLimit:210000})
 
         //transfer XXX to user
         const addressWithUNI = "0x47173B170C64d16393a52e6C480b3Ad8c302ba1e"
@@ -66,21 +66,21 @@ async function exec() {
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
-    // let nonce = 292    
-    // console.log(`cur nonce:${nonce}`)
-    // const tx = await user.sendTransaction({
-    //     to: deployer.address,
-    //     value: ethers.utils.parseEther("0.01"),
-    //     nonce:nonce,
-    //     gasPrice:2000000000
-    //   })
+    let nonce = 359
+    console.log(`cur nonce:${nonce}`)
+    const tx = await user.sendTransaction({
+        to: deployer.address,
+        value: ethers.utils.parseEther("0.01"),
+        nonce:nonce,
+        gasPrice:2000000000
+      })
 
 
     // console.log(`position 1:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}`)
     // console.log(`position 2:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 2)}`)
     // console.log(`position 3:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 3)}`)
 
-    await openPostion(cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
+    // await openPostion(cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
 
 
     if (network.config.chainId == 31337) {
@@ -90,7 +90,7 @@ async function exec() {
 }
 
 const openPostion = async (cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort) => {
-    const gasPrice = 25000000000
+    const gasPrice = 2000000000
     const investmentTokenAddress = investmentIsQuote ? tokenQuote : tokenBase
     const approvedAmount = await (await ERC20TokenWithSigner(investmentTokenAddress, user)).allowance(user.address, collateralLeverOnUser.address)
     console.log(`approvedAmount: ${approvedAmount}, investmentAmount: ${investmentAmount}`)
@@ -120,6 +120,7 @@ const openPostion = async (cDAIAddress, cXXXAddress, user, collateralLeverOnDepl
     console.log(`before:tokenQuote user balance:${await getERC20Balance(tokenQuote, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(tokenQuote, collateralLeverOnUser.address)}`)
     console.log(`openPosition: tokenBase:${tokenBase},tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},investmentIsQuote:${investmentIsQuote},lever:${lever},isshort:${isShort}`)
     const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 3000000 })//, { gasLimit: 4500000, gasPrice: gasPrice }
+    // const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 3000000 , gasPrice: gasPrice})//, { gasLimit: 4500000, gasPrice: gasPrice }
 
     console.log(`exec...`)
 
