@@ -144,7 +144,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
             } else {
                 path[0] = tokenBase;
                 path[1] = tokenQuote;
-            }
+            }            
+            //_safeApprove(investmentToken, i_uniswapV2RouterAddress, investmentAmount); 此处需要approve
             originalCollateralAmount = _swapToCollateral(
                 investmentAmount,
                 path,
@@ -477,7 +478,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         address[] memory path,
         address to,
         uint256 deadline
-    ) internal returns (uint256 amountOut) {
+    ) internal returns (uint256 amountOut) {        
         uint256[] memory amounts = IUniswapV2Router(i_uniswapV2RouterAddress)
             .swapExactTokensForTokens(amountIn, 0, path, to, deadline);
 

@@ -83,11 +83,12 @@ async function exec() {
 
 const openPostion = async (cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort) => {
     const gasPrice = 25000000000
-    const approvedAmount = await (await ERC20TokenWithSigner(tokenBase, user)).allowance(user.address, collateralLeverOnUser.address)
+    const investmentTokenAddress = investmentIsQuote?tokenQuote:tokenBase
+    const approvedAmount = await (await ERC20TokenWithSigner(investmentTokenAddress, user)).allowance(user.address, collateralLeverOnUser.address)
     console.log(`approvedAmount: ${approvedAmount}, investmentAmount: ${investmentAmount}`)
     if (approvedAmount < Number(investmentAmount)) {
         console.log(`start approve from user to contract:${investmentAmount}`)
-        const tx = await approveERC20(tokenBase, user, collateralLeverOnUser.address, investmentAmount)
+        const tx = await approveERC20(investmentTokenAddress, user, collateralLeverOnUser.address, investmentAmount)
         await tx.wait(1)
     }else{
         console.log(`无需approve`)
