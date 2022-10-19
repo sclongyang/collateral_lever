@@ -66,21 +66,21 @@ async function exec() {
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
-    let nonce = 359
-    console.log(`cur nonce:${nonce}`)
-    const tx = await user.sendTransaction({
-        to: deployer.address,
-        value: ethers.utils.parseEther("0.01"),
-        nonce:nonce,
-        gasPrice:2000000000
-      })
+    // let nonce = 362
+    // console.log(`cur nonce:${nonce}`)
+    // const tx = await user.sendTransaction({
+    //     to: deployer.address,
+    //     value: ethers.utils.parseEther("0.01"),
+    //     nonce:nonce,
+    //     gasPrice:3000000000
+    //   })
 
 
     // console.log(`position 1:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}`)
     // console.log(`position 2:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 2)}`)
     // console.log(`position 3:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 3)}`)
 
-    // await openPostion(cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
+    await openPostion(cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
 
 
     if (network.config.chainId == 31337) {
