@@ -58,13 +58,13 @@ async function exec() {
     else {
         comptrollerAddress = process.env.GOERLI_UNITROLLER_ADDRESS //大坑:goerli要使用unitroller,而非comptroller
     }
-    // let nonce = 238    
+    // let nonce = 292    
     // console.log(`cur nonce:${nonce}`)
-    // const tx = await deployer.sendTransaction({
-    //     to: user.address,
-    //     value: ethers.utils.parseEther("0.001"),
-    //     nonce:nonce++,
-    //     gasPrice:35000000000
+    // const tx = await user.sendTransaction({
+    //     to: deployer.address,
+    //     value: ethers.utils.parseEther("0.01"),
+    //     nonce:nonce,
+    //     gasPrice:2000000000
     //   })
 
 
@@ -72,7 +72,7 @@ async function exec() {
     // console.log(`position 2:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 2)}`)
     // console.log(`position 3:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 3)}`)
 
-    await openPostion(DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
+    await openPostion(cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort)
 
 
     if (network.config.chainId == 31337) {
@@ -81,44 +81,44 @@ async function exec() {
     }
 }
 
-const openPostion = async (DAIAddress, XXXAddress, cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort) => {
+const openPostion = async (cDAIAddress, cXXXAddress, user, collateralLeverOnDeployer, collateralLeverOnUser, tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort) => {
     const gasPrice = 25000000000
-    const approvedAmount = await (await ERC20TokenWithSigner(DAIAddress, user)).allowance(user.address, collateralLeverOnUser.address)
+    const approvedAmount = await (await ERC20TokenWithSigner(tokenBase, user)).allowance(user.address, collateralLeverOnUser.address)
     console.log(`approvedAmount: ${approvedAmount}, investmentAmount: ${investmentAmount}`)
     if (approvedAmount < Number(investmentAmount)) {
         console.log(`start approve from user to contract:${investmentAmount}`)
-        const tx = await approveERC20(DAIAddress, user, collateralLeverOnUser.address, investmentAmount)
+        const tx = await approveERC20(tokenBase, user, collateralLeverOnUser.address, investmentAmount)
         await tx.wait(1)
     }else{
         console.log(`无需approve`)
     }
 
-    let ctoken = await collateralLeverOnDeployer.s_token2CToken(DAIAddress)
+    let ctoken = await collateralLeverOnDeployer.s_token2CToken(tokenBase)
     console.log(`ctoken1:${ctoken}`)
     if (ctoken == ethers.constants.AddressZero) {
         const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cDAIAddress, { gasLimit: 3000000 })//, gasPrice: gasPrice
         console.log(`addSupportedCToken1: gaslimit:${txAdd.gasLimit.toString()},gasPrice:${txAdd.gasPrice.toString()}`)
         await txAdd.wait(1)
     }
-    ctoken = await collateralLeverOnDeployer.s_token2CToken(XXXAddress)
+    ctoken = await collateralLeverOnDeployer.s_token2CToken(tokenQuote)
     console.log(`ctoken2:${ctoken}`)
     if (ctoken == ethers.constants.AddressZero) {
         const txAdd = await collateralLeverOnDeployer.addSupportedCToken(cXXXAddress, { gasLimit: 3000000})//, gasPrice: gasPrice 
         console.log(`addSupportedCToken2: gaslimit:${txAdd.gasLimit.toString()},gasPrice:${txAdd.gasPrice.toString()}`)
         await txAdd.wait(1)
     }
-    console.log(`before:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
-    console.log(`before:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
-    // console.log(`openPosition: tokenBase:${tokenBase},tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},lever:${lever}`)
+    console.log(`before:tokenBase user balance:${await getERC20Balance(tokenBase, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(tokenBase, collateralLeverOnUser.address)}`)
+    console.log(`before:tokenQuote user balance:${await getERC20Balance(tokenQuote, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(tokenQuote, collateralLeverOnUser.address)}`)
+    console.log(`openPosition: tokenBase:${tokenBase},tokenQuote:${tokenQuote},investmentAmount:${investmentAmount},investmentIsQuote:${investmentIsQuote},lever:${lever},isshort:${isShort}`)
     const tx = await collateralLeverOnUser.openPosition(tokenBase, tokenQuote, investmentAmount, investmentIsQuote, lever, isShort, { gasLimit: 3000000})//, { gasLimit: 4500000, gasPrice: gasPrice }
 
     console.log(`exec...`)
 
     const txReceipt = await tx.wait(1)
 
-    console.log(`position:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
-    console.log(`after:DAI user balance:${await getERC20Balance(DAIAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(DAIAddress, collateralLeverOnUser.address)}`)
-    console.log(`after:XXX user balance:${await getERC20Balance(XXXAddress, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(XXXAddress, collateralLeverOnUser.address)}`)
+    console.log(`position:${await collateralLeverOnDeployer.s_userAddress2PositionInfos(user.address, 1)}, collateralLeverOnUser balance:${await getERC20Balance(tokenBase, collateralLeverOnUser.address)}`)
+    console.log(`after:tokenBase user balance:${await getERC20Balance(tokenBase, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(tokenBase, collateralLeverOnUser.address)}`)
+    console.log(`after:tokenQuote user balance:${await getERC20Balance(tokenQuote, user.address)}, collateralLeverOnUser balance:${await getERC20Balance(tokenQuote, collateralLeverOnUser.address)}`)
 
 
     for (let i = 0; i < txReceipt.events.length; i++) {
