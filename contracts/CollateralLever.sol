@@ -156,6 +156,7 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
 
         //flashswap
         uint256 flashSwapAmountOfCollateralToken = originalCollateralAmount * (lever - 1);
+        //第一版直接认为两个token之间有通路, todo: 前端计算出path, 传入合约
         address pair = UniswapV2Library.pairFor(i_uniswapV2FactoryAddress, tokenBase, tokenQuote);
         bytes memory data = abi.encode(
             collateralToken,
@@ -174,6 +175,8 @@ contract CollateralLever is IUniswapV2Callee, Ownable, ReentrancyGuard {
         } else {
             amount1 = flashSwapAmountOfCollateralToken;
         }
+
+        //第一版直接认为两个token之间有通路, todo: 前端计算出path, 传入合约
         address[] memory flashSwapPath = new address[](2);
         flashSwapPath[0] = borrowingToken;
         flashSwapPath[1] = collateralToken;
